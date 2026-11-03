@@ -199,16 +199,26 @@ test("layout desktop cabe na área útil com DPI alto", async ({ page }) => {
 test("launcher pequeno, sem título, e configurações acessíveis", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 560, height: 360 });
+  await page.setViewportSize({ width: 380, height: 264 });
   await expect(page.locator("header,h1,.brand")).toHaveCount(0);
   const wheel = await page.locator(".wheel").boundingBox();
-  expect(wheel!.width).toBeLessThanOrEqual(300);
+  expect(wheel!.width).toBeLessThanOrEqual(208);
+  const settings = await page
+    .getByRole("button", { name: "Configurações", exact: true })
+    .boundingBox();
+  expect(settings!.y).toBeGreaterThan(wheel!.y + wheel!.height);
+  expect(
+    Math.abs(settings!.x + settings!.width / 2 - (wheel!.x + wheel!.width / 2)),
+  ).toBeLessThan(2);
   await expect(
     page.getByRole("button", { name: "Google", exact: true }),
   ).toBeInViewport();
   await page
     .getByRole("button", { name: "Configurações", exact: true })
     .click();
+  await page
+    .getByLabel("Atalho de teclado", { exact: true })
+    .scrollIntoViewIfNeeded();
   await expect(
     page.getByLabel("Atalho de teclado", { exact: true }),
   ).toBeInViewport();

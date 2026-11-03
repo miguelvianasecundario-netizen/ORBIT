@@ -91,18 +91,16 @@ function render() {
       );
   app.innerHTML = `<div class="wallpaper" aria-hidden="true"><div class="wave wave-one"></div><div class="wave wave-two"></div><div class="grain"></div></div>
   <div class="shell ${opened ? "" : "closed"}">
-    <div class="compact-controls"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button>${opened ? `<button class="icon-button" id="close" aria-label="Fechar launcher" title="Fechar (Esc)">${icon("close")}</button>` : ""}</div>
     ${
       opened
         ? `<main class="workspace" aria-label="Launcher Orbit"><div class="launcher ${branchSide === "left" ? "branch-left" : ""}" data-launcher>
-      ${radial(selected)}
+      <div class="radial-column">${radial(selected)}<div class="compact-controls"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button><button class="icon-button dismiss" id="close" aria-label="Fechar launcher" title="Fechar (Esc)">${icon("close")}</button></div></div>
       <section class="branch ${!selected && !query ? "collapsed" : ""}" aria-label="Opções da categoria">
         <svg class="connectors" viewBox="0 0 100 360" preserveAspectRatio="none" aria-hidden="true">${[45, 135, 225, 315].map((y) => `<path d="M0 180 C60 180 35 ${y} 100 ${y}"/>`).join("")}<circle cx="4" cy="180" r="4"/></svg>
         <div class="branch-list">${listing.map(actionButton).join("")}${selected === "projects" && !query ? `<button class="bubble add-project" id="add-project" aria-label="Adicionar projeto"><span class="app-icon">${icon("plus")}</span><span class="bubble-copy"><strong>Adicionar projeto</strong></span></button>` : ""}</div>
-        <button class="text-button" id="customize">${icon("plus")} Personalizar</button>
       </section>
     </div></main>`
-        : `<div class="resting"><button class="primary" id="reopen">Abrir Orbit ${icon("arrow")}</button><p><kbd>${esc(hotkeyLabel(state.settings.hotkey))}</kbd></p></div>`
+        : `<div class="resting"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button><button class="primary" id="reopen">Abrir Orbit ${icon("arrow")}</button><p><kbd>${esc(hotkeyLabel(state.settings.hotkey))}</kbd></p></div>`
     }
     ${panel ? settingsView(state, selected) : ""}
   </div>`;

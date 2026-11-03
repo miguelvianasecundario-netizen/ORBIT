@@ -1,10 +1,10 @@
 # ORBIT
 
-Versão **0.1.1** — menu compacto de **560 × 360**, círculo de até **290 px**, sem cabeçalho ou título e configurações compactas.
+Versão **0.1.2** — menu compacto de **380 × 264**, círculo de até **208 px**, anel mais fino, sem cabeçalho ou título, engrenagem centralizada embaixo e configurações compactas.
 
-Launcher radial para Windows 11, com Tauri 2, Rust e TypeScript. A interface usa SVG e CSS, sem framework de UI. O menu de quatro categorias tem ramificações animadas, vidro translúcido e iluminação violeta, seguindo a composição da referência.
+Launcher radial para Windows 11, com Tauri 2, Rust e TypeScript. A interface usa SVG e CSS, sem framework de UI. O visual inspirado em Liquid Glass usa transparência, reflexos brancos, desfoque CSS e tons claros de menta, azul e pêssego. O menu de quatro categorias tem ramificações discretas; o centro e a região externa ficam transparentes. Não usa APIs da Apple. O efeito de desfoque do conteúdo de outras janelas depende do compositor/WebView2 e precisa de verificação no Windows.
 
-[Baixar a versão de teste 0.1.1 para Windows x64](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-windows-x64-v0.1.1.zip)
+[Baixar a versão de teste 0.1.2 para Windows x64](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-windows-x64-v0.1.2.zip)
 
 ## Executar no Windows 11
 
@@ -114,7 +114,7 @@ Se já houver Chromium instalado, defina `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` c
 Resultados da implementação:
 
 - Build TypeScript/Vite aprovado.
-- 16 testes Playwright aprovados (incluindo seleção/persistência do atalho e tamanho compacto): categorias, quatro URLs com interceptação dos destinos, fechamento/retorno, atalhos persistentes, histórico, rejeição de URLs executáveis, limitações nativas, layout compacto e dimensionamento desktop com DPI alto. Os testes exercitam `window.open`; não verificam disponibilidade dos sites externos.
+- 16 testes Playwright aprovados (incluindo seleção/persistência do atalho e tamanho compacto e engrenagem abaixo do círculo): categorias, quatro URLs com interceptação dos destinos, fechamento/retorno, atalhos persistentes, histórico, rejeição de URLs executáveis, limitações nativas, layout compacto e dimensionamento desktop com DPI alto. Os testes exercitam `window.open`; não verificam disponibilidade dos sites externos.
 - 11 testes Rust aprovados (incluindo migração de preferências, conflito e falha de persistência do atalho): SQLite, persistência após reabertura, remoção, validação de URLs/pastas, IDs desconhecidos e limpeza de histórico.
 - Verificação cruzada `cargo check --target x86_64-pc-windows-gnu --locked` aprovada, incluindo APIs Win32 e Tauri.
 - Executável Windows x64 gerado em modo release por compilação cruzada GNU, com `custom-protocol` e interface incorporada (aproximadamente 4,3 MB). Requer `WebView2Loader.dll` ao lado do executável e WebView2 Runtime instalado. A execução desse binário ainda não foi validada em Windows.
