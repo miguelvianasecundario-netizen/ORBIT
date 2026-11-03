@@ -1,3 +1,9 @@
+import {
+  DEFAULT_HOTKEY,
+  hotkeyLabel,
+  hotkeyFromEvent,
+  matchesHotkey,
+} from "./hotkey";
 import { settingsView } from "./settings";
 import { esc } from "./utils";
 import "./style.css";
@@ -14,14 +20,13 @@ import {
   chooseFolder,
   allItems,
 } from "./bridge";
-import { categories } from "./data";
 import { icon } from "./icons";
 import { radial } from "./radial";
 import type { CategoryId, MenuItem, OrbitState, Settings } from "./types";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 let state: OrbitState = {
   usage: {},
-  settings: { trigger: "alt-middle" },
+  settings: { trigger: "alt-middle", hotkey: DEFAULT_HOTKEY },
   shortcuts: [],
 };
 let selected: CategoryId | null = "browser",
@@ -73,7 +78,6 @@ function actionButton(item: MenuItem, i: number) {
 function render() {
   document.body.classList.toggle("native", native);
   document.documentElement.classList.toggle("desktop", native);
-  const category = categories.find((c) => c.id === selected);
   const available = allItems(state);
   const listing = query
     ? sorted(
@@ -85,30 +89,65 @@ function render() {
         trail.at(-1)?.children ??
           available.filter((i) => i.category === selected),
       );
-  const favorites = sorted(
-    available.filter((i) => state.usage[i.id]?.count),
-  ).slice(0, 3);
   app.innerHTML = `<div class="wallpaper" aria-hidden="true"><div class="wave wave-one"></div><div class="wave wave-two"></div><div class="grain"></div></div>
- <div class="shell ${opened ? "" : "closed"}"><header><a class="brand" href="#" aria-label="Orbit início">${icon("orbit")}<span>orbit<span class="brand-dot">.</span></span><span class="brand-caption">SEU UNIVERSO, A UM CLIQUE</span></a><div class="header-actions"><span class="mode"><i></i>${native ? "Windows · conectado" : "Modo navegador"}</span><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button>${opened ? `<button class="icon-button" id="close" aria-label="Fechar launcher" title="Fechar (Esc)">${icon("close")}</button>` : ""}</div></header>
- ${
-   opened
-     ? `<main class="workspace" aria-label="Launcher Orbit"><nav class="rail" aria-label="Navegação rápida">${categories.map((c) => `<button class="rail-button ${selected === c.id ? "active" : ""}" data-category="${c.id}" aria-label="Ir para ${c.title}" title="${c.title}">${icon(c.icon)}</button>`).join("")}<span class="rail-separator"></span><button class="rail-button" id="add" aria-label="Novo atalho" title="Novo atalho">${icon("plus")}</button><span class="rail-light"></span></nav>
- <div class="intro"><div class="eyebrow"><span></span> MENOS DISTÂNCIA. MAIS POSSIBILIDADES.</div><h1>Tudo na sua <em>órbita.</em></h1><p>Escolha uma direção. Siga suas ideias.</p></div>
- <div class="launcher ${branchSide === "left" ? "branch-left" : ""}" data-launcher>${radial(selected)}<section class="branch ${!selected && !query ? "collapsed" : ""}" aria-label="Opções da categoria"><div class="branch-heading"><span class="eyebrow">${query ? "RESULTADOS" : trail.length ? "EXPLORAR" : "EXPLORE SUA ÓRBITA"}</span><h2>${esc(query ? "Buscar atalhos" : (trail.at(-1)?.title ?? category?.title ?? "Escolha uma categoria"))}</h2><p>${esc(query ? `${listing.length} atalhos encontrados` : (category?.subtitle ?? ""))}</p></div><svg class="connectors" viewBox="0 0 100 360" preserveAspectRatio="none" aria-hidden="true">${[45, 135, 225, 315].map((y) => `<path d="M0 180 C60 180 35 ${y} 100 ${y}"/>`).join("")}<circle cx="4" cy="180" r="4"/></svg><div class="branch-list">${listing.map(actionButton).join("")}${selected === "projects" && !query ? `<button class="bubble add-project" id="add-project" aria-label="Adicionar projeto"><span class="app-icon">${icon("plus")}</span><span class="bubble-copy"><strong>Adicionar projeto</strong><small>Suas pastas favoritas, aqui</small></span>${icon("arrow", "bubble-arrow")}</button>` : ""}${!listing.length && query ? '<p class="empty">Nenhum atalho encontrado.</p>' : ""}</div><button class="text-button" id="customize">${icon("plus")} Personalizar atalhos</button></section></div>
- <footer><div class="activation-hint">${icon("cursor")}<span>${state.settings.trigger === "middle" ? "Clique central" : state.settings.trigger === "alt-middle" ? "Alt + clique central" : "Ctrl + Alt + Espaço"}<small>${native ? "para chamar o Orbit" : "na versão desktop"}</small></span></div><div class="footer-center">${favorites.length ? `<span>NA SUA ÓRBITA</span>${favorites.map((i) => `<button class="favorite" data-item="${esc(i.id)}" title="${state.usage[i.id]?.count} utilizações">${icon(i.icon)}${esc(i.title)}</button>`).join("")}` : '<span>FEITO PARA O SEU FLUXO</span><span class="local-indicator">' + icon("shield") + "Privado. Local. Seu.</span>"}</div><span class="escape-hint"><kbd>esc</kbd> para fechar</span></footer></main>`
-     : `<div class="resting"><div class="resting-logo">${icon("orbit")}</div><span class="eyebrow">SEU PRÓXIMO PASSO COMEÇA AQUI</span><h1>Seu universo.<br/><em>A um clique.</em></h1><button class="primary" id="reopen">Abrir Orbit ${icon("arrow")}</button><p><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Espaço</kbd></p></div>`
- }
- ${panel ? settingsView(state, selected) : ""}</div>`;
+  <div class="shell ${opened ? "" : "closed"}">
+    <div class="compact-controls"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button>${opened ? `<button class="icon-button" id="close" aria-label="Fechar launcher" title="Fechar (Esc)">${icon("close")}</button>` : ""}</div>
+    ${
+      opened
+        ? `<main class="workspace" aria-label="Launcher Orbit"><div class="launcher ${branchSide === "left" ? "branch-left" : ""}" data-launcher>
+      ${radial(selected)}
+      <section class="branch ${!selected && !query ? "collapsed" : ""}" aria-label="Opções da categoria">
+        <svg class="connectors" viewBox="0 0 100 360" preserveAspectRatio="none" aria-hidden="true">${[45, 135, 225, 315].map((y) => `<path d="M0 180 C60 180 35 ${y} 100 ${y}"/>`).join("")}<circle cx="4" cy="180" r="4"/></svg>
+        <div class="branch-list">${listing.map(actionButton).join("")}${selected === "projects" && !query ? `<button class="bubble add-project" id="add-project" aria-label="Adicionar projeto"><span class="app-icon">${icon("plus")}</span><span class="bubble-copy"><strong>Adicionar projeto</strong></span></button>` : ""}</div>
+        <button class="text-button" id="customize">${icon("plus")} Personalizar</button>
+      </section>
+    </div></main>`
+        : `<div class="resting"><button class="primary" id="reopen">Abrir Orbit ${icon("arrow")}</button><p><kbd>${esc(hotkeyLabel(state.settings.hotkey))}</kbd></p></div>`
+    }
+    ${panel ? settingsView(state, selected) : ""}
+  </div>`;
   bind();
 }
 
 function bind() {
-  app
-    .querySelector<HTMLAnchorElement>(".brand")
-    ?.addEventListener("click", (e) => {
-      e.preventDefault();
-      show();
-    });
+  const hotkeyInput = app.querySelector<HTMLInputElement>("#hotkey");
+  const saveHotkey = app.querySelector<HTMLButtonElement>("#save-hotkey");
+  hotkeyInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Tab") return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.key === "Escape") {
+      hotkeyInput.value = hotkeyLabel(state.settings.hotkey);
+      delete hotkeyInput.dataset.hotkey;
+      saveHotkey!.disabled = true;
+      return;
+    }
+    try {
+      const value = hotkeyFromEvent(e);
+      if (value) {
+        hotkeyInput.value = hotkeyLabel(value);
+        hotkeyInput.dataset.hotkey = value;
+        saveHotkey!.disabled = value === state.settings.hotkey;
+      }
+    } catch (error) {
+      notify(String(error), true);
+    }
+  });
+  saveHotkey?.addEventListener("click", async () => {
+    const hotkey = hotkeyInput?.dataset.hotkey;
+    if (!hotkey) return;
+    saveHotkey.disabled = true;
+    try {
+      await saveSettings({ ...state.settings, hotkey });
+      await refresh();
+      render();
+      notify("Atalho de teclado atualizado.");
+    } catch (error) {
+      saveHotkey.disabled = false;
+      notify(String(error), true);
+    }
+  });
+
   app.querySelector("#close")?.addEventListener("click", () => void close());
   app.querySelector("#reopen")?.addEventListener("click", show);
   for (const el of app.querySelectorAll<HTMLElement>("[data-category]"))
@@ -153,7 +192,7 @@ function bind() {
       const trigger = (e.target as HTMLSelectElement)
         .value as Settings["trigger"];
       try {
-        await saveSettings({ trigger });
+        await saveSettings({ ...state.settings, trigger });
         await refresh();
         notify("Ativação atualizada.");
       } catch (error) {
@@ -250,7 +289,10 @@ async function runItem(id: string) {
   }
 }
 document.addEventListener("keydown", (e) => {
-  if (e.ctrlKey && e.altKey && e.code === "Space") {
+  if (
+    !(e.target as HTMLElement).closest("input,select,textarea") &&
+    matchesHotkey(e, state.settings.hotkey)
+  ) {
     e.preventDefault();
     show();
     return;

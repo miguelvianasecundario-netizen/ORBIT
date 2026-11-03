@@ -41,12 +41,12 @@ pub fn activate(app: &AppHandle) -> Result<(), String> {
         .map(|m| m.scale_factor())
         .unwrap_or(1.0);
     let r = info.rcWork;
-    let width = (1040.0 * scale).round().min((r.right - r.left) as f64) as u32;
-    let height = (720.0 * scale).round().min((r.bottom - r.top) as f64) as u32;
+    let width = (560.0 * scale).round().min((r.right - r.left) as f64) as u32;
+    let height = (360.0 * scale).round().min((r.bottom - r.top) as f64) as u32;
     let left = point.x > r.left + (r.right - r.left) / 2;
-    let center_x = if left { 0.66 } else { 0.30 };
+    let center_x = if left { 0.71 } else { 0.29 };
     let x = (point.x - (width as f64 * center_x) as i32).clamp(r.left, r.right - width as i32);
-    let y = (point.y - (height as f64 * 0.52) as i32).clamp(r.top, r.bottom - height as i32);
+    let y = (point.y - (height as f64 * 0.53) as i32).clamp(r.top, r.bottom - height as i32);
     window
         .set_size(PhysicalSize::new(width, height))
         .map_err(|e| e.to_string())?;

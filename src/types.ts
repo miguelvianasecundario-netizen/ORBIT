@@ -13,6 +13,7 @@ export interface MenuItem {
   children?: MenuItem[];
 }
 export interface Settings {
+  hotkey: string;
   trigger: "middle" | "alt-middle" | "keyboard";
 }
 export interface Usage {

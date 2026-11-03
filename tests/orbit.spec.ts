@@ -195,3 +195,93 @@ test("layout desktop cabe na área útil com DPI alto", async ({ page }) => {
     ),
   ).toBe(true);
 });
+
+test("launcher pequeno, sem título, e configurações acessíveis", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 560, height: 360 });
+  await expect(page.locator("header,h1,.brand")).toHaveCount(0);
+  const wheel = await page.locator(".wheel").boundingBox();
+  expect(wheel!.width).toBeLessThanOrEqual(300);
+  await expect(
+    page.getByRole("button", { name: "Google", exact: true }),
+  ).toBeInViewport();
+  await page
+    .getByRole("button", { name: "Configurações", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Atalho de teclado", { exact: true }),
+  ).toBeInViewport();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollHeight <= innerHeight,
+    ),
+  ).toBe(true);
+});
+
+test("atalho escolhido é salvo, persiste e substitui o anterior", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Configurações", exact: true })
+    .click();
+  await page.getByLabel("Atalho de teclado", { exact: true }).click();
+  await page.keyboard.press("F8");
+  await page
+    .getByRole("button", { name: "Salvar atalho de teclado", exact: true })
+    .click();
+  await page.reload();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Control+Alt+Space");
+  await expect(
+    page.getByRole("button", { name: "Abrir Orbit", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("F8");
+  await expect(
+    page.getByRole("button", { name: "Navegador", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Configurações", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Atalho de teclado", { exact: true }),
+  ).toHaveValue("F8");
+  await page.getByLabel("Abrir o launcher com").selectOption("keyboard");
+  await page.reload();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("F8");
+  await expect(
+    page.getByRole("button", { name: "Navegador", exact: true }),
+  ).toBeVisible();
+});
+
+test("captura uma combinação e rejeita letra isolada e F12", async ({
+  page,
+}) => {
+  await page
+    .getByRole("button", { name: "Configurações", exact: true })
+    .click();
+  await page.getByLabel("Atalho de teclado", { exact: true }).click();
+  await page.keyboard.press("f");
+  await expect(page.getByRole("alert")).toContainText("Ctrl ou Alt");
+  await expect(
+    page.getByRole("button", { name: "Salvar atalho de teclado", exact: true }),
+  ).toBeDisabled();
+  await page.keyboard.press("F12");
+  await expect(page.getByRole("alert")).toContainText("exceto F12");
+  await page.keyboard.press("Control+Shift+O");
+  await expect(
+    page.getByLabel("Atalho de teclado", { exact: true }),
+  ).toHaveValue("Ctrl + Shift + O");
+  await page
+    .getByRole("button", { name: "Salvar atalho de teclado", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Fechar configurações", exact: true })
+    .click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Control+Shift+O");
+  await expect(
+    page.getByRole("button", { name: "Navegador", exact: true }),
+  ).toBeVisible();
+});

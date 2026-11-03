@@ -1,16 +1,21 @@
+use crate::{
+    hotkey::{self, Hotkey, Registration},
+    models::Settings,
+    persistence::Database,
+};
 use std::sync::{
     atomic::{AtomicBool, AtomicU8, Ordering},
     mpsc, Arc,
 };
 use std::thread::JoinHandle;
 use tauri::AppHandle;
+use tauri::Manager;
 use windows_sys::Win32::{
     Foundation::{LPARAM, LRESULT, WPARAM},
     System::{LibraryLoader::GetModuleHandleW, Threading::GetCurrentThreadId},
     UI::{
         Input::KeyboardAndMouse::{
-            GetAsyncKeyState, RegisterHotKey, UnregisterHotKey, MOD_ALT, MOD_CONTROL, MOD_NOREPEAT,
-            VK_MENU, VK_SPACE,
+            GetAsyncKeyState, RegisterHotKey, UnregisterHotKey, MOD_NOREPEAT, VK_MENU,
         },
         WindowsAndMessaging::*,
     },
@@ -22,10 +27,38 @@ struct Context {
     swallowed: bool,
     pending: Arc<AtomicBool>,
 }
+const CONFIGURE: u32 = WM_APP + 1;
+struct Update {
+    settings: Settings,
+    reply: mpsc::SyncSender<Result<(), String>>,
+}
+struct WindowsRegistrar;
+impl Registration for WindowsRegistrar {
+    fn register(&mut self, id: i32, key: Hotkey) -> Result<(), String> {
+        if unsafe {
+            RegisterHotKey(
+                std::ptr::null_mut(),
+                id,
+                key.modifiers | MOD_NOREPEAT,
+                key.key,
+            )
+        } == 0
+        {
+            Err("Esse atalho está em uso ou é reservado pelo Windows. Escolha outro; o anterior continua ativo.".into())
+        } else {
+            Ok(())
+        }
+    }
+    fn unregister(&mut self, id: i32) {
+        unsafe {
+            UnregisterHotKey(std::ptr::null_mut(), id);
+        }
+    }
+}
 pub struct Listener {
     thread: Option<JoinHandle<()>>,
     thread_id: u32,
-    trigger: Arc<AtomicU8>,
+    updates: mpsc::Sender<Update>,
 }
 fn trigger_number(value: &str) -> u8 {
     match value {
@@ -82,8 +115,11 @@ unsafe extern "system" fn hook(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRE
     CallNextHookEx(std::ptr::null_mut(), code, wparam, lparam)
 }
 impl Listener {
-    pub fn start(app: AppHandle, trigger: &str) -> Result<Self, String> {
-        let trigger = Arc::new(AtomicU8::new(trigger_number(trigger)));
+    pub fn start(app: AppHandle, settings: &Settings) -> Result<Self, String> {
+        settings.validate()?;
+        let initial_hotkey = hotkey::parse(&settings.hotkey)?;
+        let trigger = Arc::new(AtomicU8::new(trigger_number(&settings.trigger)));
+        let (updates, requests) = mpsc::channel::<Update>();
         let mode = trigger.clone();
         let (tx, rx) = mpsc::sync_channel(1);
         let thread = std::thread::spawn(move || unsafe {
@@ -92,7 +128,7 @@ impl Listener {
             CONTEXT.with(|c| {
                 *c.borrow_mut() = Some(Context {
                     app: app.clone(),
-                    trigger: mode,
+                    trigger: mode.clone(),
                     swallowed: false,
                     pending: Arc::new(AtomicBool::new(false)),
                 })
@@ -107,20 +143,30 @@ impl Listener {
                 let _ = tx.send(Err("O Windows recusou a captura global do mouse.".into()));
                 return;
             }
-            if RegisterHotKey(
-                std::ptr::null_mut(),
-                1,
-                MOD_CONTROL | MOD_ALT | MOD_NOREPEAT,
-                VK_SPACE as u32,
-            ) == 0
-            {
+            let mut registrar = WindowsRegistrar;
+            if let Err(error) = registrar.register(1, initial_hotkey) {
                 UnhookWindowsHookEx(mouse);
-                let _=tx.send(Err("Ctrl+Alt+Espaço está em uso por outro aplicativo. Feche-o e inicie o Orbit novamente.".into()));
+                let _ = tx.send(Err(error));
                 return;
             }
+            let mut current = (1, initial_hotkey);
             let _ = tx.send(Ok(GetCurrentThreadId()));
             while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) > 0 {
-                if msg.message == WM_HOTKEY && msg.wParam == 1 {
+                if msg.message == CONFIGURE {
+                    while let Ok(update) = requests.try_recv() {
+                        let result = hotkey::parse(&update.settings.hotkey).and_then(|next| {
+                            hotkey::replace(&mut registrar, &mut current, next, || {
+                                app.state::<Database>()
+                                    .save_settings(update.settings.clone())
+                            })
+                        });
+                        if result.is_ok() {
+                            mode.store(trigger_number(&update.settings.trigger), Ordering::Relaxed);
+                        }
+                        let _ = update.reply.send(result);
+                    }
+                }
+                if msg.message == WM_HOTKEY && msg.wParam == current.0 as usize {
                     let handle = app.clone();
                     let _ = app.run_on_main_thread(move || {
                         if let Err(e) = crate::window::activate(&handle) {
@@ -131,7 +177,7 @@ impl Listener {
                 TranslateMessage(&msg);
                 DispatchMessageW(&msg);
             }
-            UnregisterHotKey(std::ptr::null_mut(), 1);
+            registrar.unregister(current.0);
             UnhookWindowsHookEx(mouse);
             CONTEXT.with(|c| *c.borrow_mut() = None);
         });
@@ -139,7 +185,7 @@ impl Listener {
             Ok(thread_id) => Ok(Self {
                 thread: Some(thread),
                 thread_id,
-                trigger,
+                updates,
             }),
             Err(e) => {
                 let _ = thread.join();
@@ -147,8 +193,17 @@ impl Listener {
             }
         }
     }
-    pub fn set_trigger(&self, value: &str) {
-        self.trigger.store(trigger_number(value), Ordering::Relaxed);
+    pub fn configure(&self, settings: Settings) -> Result<(), String> {
+        settings.validate()?;
+        let (reply, rx) = mpsc::sync_channel(1);
+        self.updates
+            .send(Update { settings, reply })
+            .map_err(|_| "O listener foi encerrado.")?;
+        if unsafe { PostThreadMessageW(self.thread_id, CONFIGURE, 0, 0) } == 0 {
+            return Err("Não foi possível atualizar o atalho.".into());
+        }
+        rx.recv()
+            .map_err(|_| "O listener foi encerrado.".to_string())?
     }
     pub fn stop(&mut self) {
         if let Some(thread) = self.thread.take() {

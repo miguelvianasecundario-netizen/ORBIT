@@ -1,4 +1,5 @@
 pub mod actions;
+pub mod hotkey;
 pub mod models;
 #[cfg(windows)]
 mod native;
@@ -42,17 +43,11 @@ mod desktop {
         window.hide().map_err(|e| e.to_string())
     }
     #[tauri::command]
-    fn save_settings(
-        settings: Settings,
-        db: State<Database>,
-        native: State<NativeState>,
-    ) -> Result<(), String> {
+    fn save_settings(settings: Settings, native: State<NativeState>) -> Result<(), String> {
         settings.validate()?;
         let guard = native.0.lock().map_err(|e| e.to_string())?;
         let listener = guard.as_ref().ok_or("Captura global indisponível.")?;
-        db.save_settings(settings.clone())?;
-        listener.set_trigger(&settings.trigger);
-        Ok(())
+        listener.configure(settings)
     }
     #[tauri::command]
     fn add_shortcut(
@@ -90,7 +85,7 @@ mod desktop {
                 let db = Database::open(&directory.join("orbit.sqlite3"))
                     .map_err(std::io::Error::other)?;
                 let settings = db.snapshot().map_err(std::io::Error::other)?.settings;
-                let listener = Listener::start(app.handle().clone(), &settings.trigger)
+                let listener = Listener::start(app.handle().clone(), &settings)
                     .map_err(std::io::Error::other)?;
                 app.manage(db);
                 app.manage(NativeState(Mutex::new(Some(listener))));
@@ -98,7 +93,7 @@ mod desktop {
                 let quit = MenuItem::with_id(app, "quit", "Encerrar Orbit", true, None::<&str>)?;
                 let menu = Menu::with_items(app, &[&open, &quit])?;
                 let mut tray = TrayIconBuilder::new()
-                    .tooltip("Orbit — Alt + clique central")
+                    .tooltip("Orbit — launcher radial")
                     .menu(&menu)
                     .on_menu_event(|app, event| match event.id.as_ref() {
                         "open" => {

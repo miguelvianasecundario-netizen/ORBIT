@@ -307,6 +307,7 @@ mod tests {
         let db = memory_db();
         db.save_settings(Settings {
             trigger: "keyboard".into(),
+            ..Settings::default()
         })
         .unwrap();
         let shortcut = db
@@ -356,7 +357,8 @@ mod tests {
         let db = memory_db();
         assert!(db
             .save_settings(Settings {
-                trigger: "unknown".into()
+                trigger: "unknown".into(),
+                ..Settings::default()
             })
             .is_err());
         assert!(db
@@ -420,6 +422,21 @@ mod tests {
     }
 
     #[test]
+    fn old_preferences_keep_working_and_gain_default_hotkey() {
+        let db = memory_db();
+        db.lock()
+            .unwrap()
+            .execute(
+                "INSERT INTO preferences(key,value) VALUES('settings',?1)",
+                [r#"{"trigger":"middle"}"#],
+            )
+            .unwrap();
+        let state = db.snapshot().unwrap();
+        assert_eq!(state.settings.trigger, "middle");
+        assert_eq!(state.settings.hotkey, "Ctrl+Alt+Space");
+    }
+
+    #[test]
     fn reopening_database_retains_settings_and_counts() {
         let directory = std::env::temp_dir().join(format!("orbit-reopen-{}", Uuid::new_v4()));
         std::fs::create_dir(&directory).unwrap();
@@ -428,6 +445,7 @@ mod tests {
             let db = Database::open(&path).unwrap();
             db.save_settings(Settings {
                 trigger: "middle".into(),
+                hotkey: "F8".into(),
             })
             .unwrap();
             db.record_use("browser-youtube").unwrap();
@@ -436,6 +454,7 @@ mod tests {
             let db = Database::open(&path).unwrap();
             let snapshot = db.snapshot().unwrap();
             assert_eq!(snapshot.settings.trigger, "middle");
+            assert_eq!(snapshot.settings.hotkey, "F8");
             assert_eq!(snapshot.usage["browser-youtube"].count, 1);
         }
         std::fs::remove_dir_all(directory).unwrap();

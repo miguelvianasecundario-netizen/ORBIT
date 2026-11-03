@@ -1,3 +1,4 @@
+import { DEFAULT_HOTKEY } from "./hotkey";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { items } from "./data";
@@ -11,7 +12,11 @@ import type {
 export const native = isTauri();
 const key = "orbit.local.v1";
 function empty(): OrbitState {
-  return { usage: {}, settings: { trigger: "alt-middle" }, shortcuts: [] };
+  return {
+    usage: {},
+    settings: { trigger: "alt-middle", hotkey: DEFAULT_HOTKEY },
+    shortcuts: [],
+  };
 }
 export function validateUrl(value: string): string {
   const url = new URL(value);
@@ -36,6 +41,7 @@ function read(): OrbitState {
       !value.usage
     )
       throw Error();
+    value.settings.hotkey ??= DEFAULT_HOTKEY;
     return value;
   } catch {
     throw new Error(

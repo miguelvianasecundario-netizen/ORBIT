@@ -11,12 +11,15 @@ pub struct Usage {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Settings {
     pub trigger: String,
+    #[serde(default = "crate::hotkey::default_hotkey")]
+    pub hotkey: String,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             trigger: "alt-middle".into(),
+            hotkey: crate::hotkey::default_hotkey(),
         }
     }
 }
@@ -24,7 +27,7 @@ impl Default for Settings {
 impl Settings {
     pub fn validate(&self) -> Result<(), String> {
         match self.trigger.as_str() {
-            "middle" | "alt-middle" | "keyboard" => Ok(()),
+            "middle" | "alt-middle" | "keyboard" => crate::hotkey::parse(&self.hotkey).map(|_| ()),
             _ => Err("Acionamento inválido.".into()),
         }
     }
