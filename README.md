@@ -1,10 +1,12 @@
 # ORBIT
 
-Versão **0.1.2** — menu compacto de **380 × 264**, círculo de até **208 px**, anel mais fino, sem cabeçalho ou título, engrenagem centralizada embaixo e configurações compactas.
+Versão **0.1.3** — menu compacto de **380 × 264**, círculo de até **208 px**, anel mais fino, sem cabeçalho ou título, engrenagem centralizada embaixo e configurações compactas.
 
 Launcher radial para Windows 11, com Tauri 2, Rust e TypeScript. A interface usa SVG e CSS, sem framework de UI. O visual inspirado em Liquid Glass usa transparência, reflexos brancos, desfoque CSS e tons claros de menta, azul e pêssego. O menu de quatro categorias tem ramificações discretas; o centro e a região externa ficam transparentes. Não usa APIs da Apple. O efeito de desfoque do conteúdo de outras janelas depende do compositor/WebView2 e precisa de verificação no Windows.
 
-[Baixar a versão de teste 0.1.2 para Windows x64](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-windows-x64-v0.1.2.zip)
+[Baixar a versão de teste 0.1.3 para Windows x64](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-windows-x64-v0.1.3.zip)
+
+Correção da versão 0.1.3: nomes e ícones foram reposicionados individualmente dentro dos setores do anel. O tamanho compacto e a engrenagem embaixo foram preservados.
 
 ## Executar no Windows 11
 

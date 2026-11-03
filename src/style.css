@@ -159,6 +159,7 @@ button svg {
 }
 .wheel {
   width: 208px;
+  container-type: inline-size;
   aspect-ratio: 1;
   position: relative;
   isolation: isolate;
@@ -211,34 +212,33 @@ button svg {
   stroke: #ffffff7d;
   stroke-width: 1;
 }
+/* Anchor each child in the 500-unit SVG coordinate space. A vertical
+   icon/label stack cannot fit inside the thin diagonal part of this ring. */
 .category {
   position: absolute;
-  width: 34%;
-  height: 34%;
+  width: 50%;
+  height: 50%;
+  padding: 0;
   background: transparent;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 4px;
-  border-radius: 40%;
   color: #31544f;
   text-shadow: 0 1px 2px #ffffffc9;
 }
 .category .icon {
-  width: 19px;
-  height: 19px;
+  position: absolute;
+  width: 9cqw;
+  height: 9cqw;
+  transform: translate(-50%, -50%);
   stroke-width: 1.55;
   filter: drop-shadow(0 1px 1px #ffffff8c);
-  transition: transform 0.2s;
-}
-.category:hover .icon {
-  transform: translateY(-2px);
 }
 .category span {
-  font-size: 9px;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: 4.3cqw;
+  line-height: 1.15;
   font-weight: 550;
   letter-spacing: -0.1px;
+  white-space: nowrap;
 }
 .category small {
   display: none;
@@ -247,20 +247,52 @@ button svg {
   color: #116b58;
 }
 .category.apps {
-  left: 6%;
-  top: 6%;
+  left: 0;
+  top: 0;
 }
 .category.browser {
-  right: 6%;
-  top: 6%;
+  right: 0;
+  top: 0;
 }
 .category.projects {
-  left: 6%;
-  bottom: 6%;
+  left: 0;
+  bottom: 0;
 }
 .category.actions {
-  right: 6%;
-  bottom: 6%;
+  right: 0;
+  bottom: 0;
+}
+.category.apps .icon {
+  left: 36%;
+  top: 70%;
+}
+.category.apps span {
+  left: 65.2%;
+  top: 36%;
+}
+.category.browser .icon {
+  left: 64%;
+  top: 70%;
+}
+.category.browser span {
+  left: 34.8%;
+  top: 36%;
+}
+.category.projects .icon {
+  left: 36%;
+  top: 30%;
+}
+.category.projects span {
+  left: 65.2%;
+  top: 64%;
+}
+.category.actions .icon {
+  left: 64%;
+  top: 30%;
+}
+.category.actions span {
+  left: 34.8%;
+  top: 64%;
 }
 .core {
   position: absolute;
@@ -707,13 +739,6 @@ body.native {
   .radial-column,
   .wheel {
     width: 176px;
-  }
-  .category span {
-    font-size: 8px;
-  }
-  .category .icon {
-    width: 16px;
-    height: 16px;
   }
   .bubble {
     padding: 5px;
