@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-window",
+  "description": "Eventos e seleção explícita de pastas somente na janela local ORBIT.",
+  "windows": ["main"],
+  "permissions": ["core:event:default", "dialog:allow-open"]
+}
