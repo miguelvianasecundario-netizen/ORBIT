@@ -1,14 +1,34 @@
-# Validação — ORBIT 0.1.5
+# Validação — ORBIT 0.1.6
 
-04/11/2026.
+Base recebida: `orbit-codigo-fonte-v0.1.5.zip`. Ambiente desta rodada: Linux, Node 24, Chromium e Rust. O relatório anterior recebido está em [docs/validation-v0.1.5-received.md](docs/validation-v0.1.5-received.md); seus testes Windows não foram repetidos aqui.
 
-- 50 testes Playwright passaram: modos, quatro temas, persistência, páginas da bola, cadastro de links, layout, contraste, movimento reduzido e animação 200 ms.
-- Matriz de interface: 720x440, 620x380, 540x340, 380x264 e 320x480; escalas 100%, 125%, 150% e 200%.
-- 23 testes Rust passaram: preferências antigas, novos modos/temas, atalhos de jogos e pastas, revalidação de destinos, SQLite, atalhos globais e geometria de janelas.
-- Clippy com -D warnings, TypeScript/Vite e release Tauri/NSIS aprovados.
-- Executável 0.1.5 abriu no Windows. O teste nativo confirmou 720x440 DIP, fundo externo transparente, troca de modo e temas salvos no SQLite. A interface real foi observada com os seis streamings e o atalho global reabriu o launcher.
-- O seletor nativo de pasta abriu. A automação seguinte foi interrompida porque a política de scripts bloqueou um auxiliar PowerShell. Nenhuma proteção do Windows foi alterada.
+## Resultado
 
-Pendente: concluir o fluxo real selecionar/salvar/abrir .exe e pasta na interface; validar monitores físicos com DPI misto; testar instalação/desinstalação em máquina limpa. Testes da prévia e do backend não substituem esses fluxos nativos.
+- **59 testes Playwright passaram.** Os 50 existentes passaram antes das alterações. Sete novos casos falharam na fonte recebida e passaram após as correções; mais dois cobrem o botão de Streaming e o limite Unicode.
+- **23 testes Rust passaram**, incluindo os sete de geometria que antes eram compilados apenas no Windows. Nenhuma preferência ou tabela foi migrada de forma destrutiva.
+- **TypeScript/Vite e Clippy do núcleo aprovados**, com `-D warnings`.
+- **Executável Windows x64 compilado em release** com alvo GNU, `custom-protocol` e a interface final incorporada. `orbit.exe` e `WebView2Loader.dll` são PE x86-64. O binário 0.1.6 não foi executado neste ambiente Linux.
+- Após o acabamento final do círculo e cores, **21 testes afetados foram repetidos e passaram**; o restante da suíte não sofreu alterações funcionais.
+- Layouts: 720×440, 620×380, 540×340, 380×264 e 320×480; escalas de rasterização 100%, 125%, 150% e 200%. Isso não emula monitores físicos com DPI misto.
+- Quatro temas conferidos em composições sobre fundos claros, escuros e com texto, **com desfoque CSS desligado**. Texto principal/secundário sobre as superfícies testadas: contraste mínimo 4,95:1; ícones da lista do navegador: mínimo 4,71:1. Método: cores CSS computadas, composição alfa sobre preto/branco, luminância sRGB WCAG. Não é uma auditoria completa de acessibilidade nem uma medida dos pixels do Windows.
 
-O pacote não é assinado digitalmente. As imagens de temas entregues são capturas da prévia web. A identidade app.orbit.launcher e os dados anteriores foram preservados; há cópia do banco anterior aos testes na pasta work/backup-before-v015 da máquina de origem.
+## Regressões cobertas
+
+1. Dois envios consecutivos não duplicam o atalho.
+2. Troca de categoria/bola e cancelamento do seletor preservam o .exe escolhido.
+3. Falha ao registrar F8 não impede salvar o tema seguinte, não perde o formulário e mantém o atalho anterior.
+4. Foco entra na lista compacta e retorna ao fechar configurações.
+5. Nomes longos cabem no setor em janela normal e baixa, com nome completo acessível.
+6. Salvar o atalho de teclado preserva o nome e URL em edição.
+7. O + de Streaming permanece visível e abre o formulário correto.
+8. Interface e backend aceitam até 80 caracteres Unicode; a interface rejeita 81.
+
+Os testes de seletor e de conflito de atalho em `tests/regressions.spec.ts` simulam **somente a fronteira IPC**. Não abrem diálogos do sistema nem registram teclas no Windows. Os testes Rust validam dados e substituição transacional do registro, usando implementações de teste.
+
+## Pendente no Windows
+
+- Selecionar, cancelar, salvar e abrir pasta/.exe pelo seletor real; testar jogos portáteis e diretório de trabalho.
+- Conferir composição transparente, ativação global, foco externo e múltiplos monitores com DPI misto.
+- Gerar e testar instalação/desinstalação NSIS em ambiente limpo.
+
+Os auxiliares `tools/check-native.mjs` e `tools/check-rest-native.mjs` são para Windows e não foram executados nesta rodada. O primeiro agora espera 720×440 DIP e respeita a política de execução PowerShell vigente.

@@ -1,12 +1,10 @@
+use crate::window_geometry::{placement, WorkArea};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize};
 use windows_sys::Win32::{
     Foundation::{POINT, RECT},
     Graphics::Gdi::{GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTONEAREST},
     UI::WindowsAndMessaging::GetCursorPos,
 };
-#[path = "window_geometry.rs"]
-mod geometry;
-use geometry::{placement, WorkArea};
 
 pub fn activate(app: &AppHandle) -> Result<(), String> {
     // Do not replace the form while a native file/folder picker owns it.

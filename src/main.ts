@@ -48,27 +48,47 @@ const compactLayout = () => innerWidth < 620 || innerHeight < 380;
 let wheelPage = 0;
 let settingsQueue: Promise<void> = Promise.resolve();
 let preferenceRevision = 0;
+let confirmedSettings = { ...state.settings };
+let pendingSettings: { patch: Partial<Settings> }[] = [];
 const defaultCategory = (): CategoryId =>
   state.settings.mode === "main" ? "browser" : "streaming";
 function applyTheme() {
   document.documentElement.dataset.theme = state.settings.theme;
 }
-async function updateSettings(patch: Partial<Settings>) {
-  const revision = ++preferenceRevision;
-  const next = { ...state.settings, ...patch };
-  state.settings = next;
+function syncPreferenceControls() {
   applyTheme();
-  const work = settingsQueue.then(() => saveSettings(next));
-  settingsQueue = work.catch(() => {});
-  try {
-    await work;
-  } catch (error) {
-    if (revision === preferenceRevision) {
-      await refresh();
-      render();
+  for (const el of app.querySelectorAll<HTMLElement>("[data-theme-choice]"))
+    el.setAttribute(
+      "aria-pressed",
+      String(el.dataset.themeChoice === state.settings.theme),
+    );
+  const trigger = app.querySelector<HTMLSelectElement>("#trigger");
+  if (trigger) trigger.value = state.settings.trigger;
+}
+function updateSettings(patch: Partial<Settings>): Promise<void> {
+  preferenceRevision++;
+  const change = { patch: { ...patch } };
+  pendingSettings.push(change);
+  state.settings = { ...state.settings, ...patch };
+  syncPreferenceControls();
+  const work = settingsQueue.then(async () => {
+    // Build on the last successful save. A rejected hotkey must not be copied
+    // into a later, unrelated theme or activation change.
+    const next = { ...confirmedSettings, ...change.patch };
+    try {
+      await saveSettings(next);
+      confirmedSettings = next;
+    } finally {
+      pendingSettings = pendingSettings.filter((entry) => entry !== change);
+      state.settings = pendingSettings.reduce(
+        (settings, entry) => ({ ...settings, ...entry.patch }),
+        { ...confirmedSettings },
+      );
+      syncPreferenceControls();
     }
-    throw error;
-  }
+  });
+  settingsQueue = work.catch(() => {});
+  return work;
 }
 let selected: CategoryId | null = compactLayout() ? null : "browser",
   opened = true,
@@ -77,6 +97,39 @@ let selected: CategoryId | null = compactLayout() ? null : "browser",
   query = "",
   busy = false;
 let trail: MenuItem[] = [];
+let addingShortcut = false;
+let pickingDestination = false;
+let panelOpener = "#settings";
+function rememberPanelOpener() {
+  const el = document.activeElement;
+  for (const attr of [
+    "id",
+    "data-category",
+    "data-item",
+    "data-suggestion",
+    "data-add",
+  ]) {
+    const value = el?.getAttribute(attr);
+    if (value) {
+      panelOpener = `[${attr}="${CSS.escape(value)}"]`;
+      return;
+    }
+  }
+}
+function focusVisible(...selectors: string[]) {
+  for (const selector of selectors) {
+    const el = app.querySelector<HTMLElement>(selector);
+    if (el?.getClientRects().length) {
+      el.focus({ preventScroll: true });
+      return;
+    }
+  }
+}
+function closePanel() {
+  panel = false;
+  render();
+  focusVisible(panelOpener, "#branch-settings", "#settings", ".category");
+}
 
 const sorted = (list: MenuItem[]) =>
   [...list].sort(
@@ -94,7 +147,14 @@ function notify(message: string, error = false) {
 }
 async function refresh() {
   await settingsQueue;
-  state = await loadState();
+  const revision = preferenceRevision;
+  const snapshot = await loadState();
+  if (revision === preferenceRevision) {
+    state = snapshot;
+    confirmedSettings = { ...snapshot.settings };
+  } else {
+    state = { ...snapshot, settings: state.settings };
+  }
 }
 async function close() {
   try {
@@ -142,9 +202,9 @@ function render(animate = false) {
         ? `<main class="workspace" aria-label="Launcher Orbit"><div class="launcher ${selected ? "has-selection" : ""} ${branchSide === "left" ? "branch-left" : ""}" data-launcher>
       <div class="radial-column">${radial(selected, state, wheelPage)}<div class="compact-controls"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button><button class="icon-button" id="add-to-wheel" aria-label="Adicionar à bola" title="Adicionar à bola">${icon("plus")}</button>${pageCount > 1 ? `<div class="page-controls"><button class="icon-button" id="previous-page" aria-label="Página anterior de opções">${icon("chevronLeft")}</button><span>${wheelPage + 1}/${pageCount}</span><button class="icon-button" id="next-page" aria-label="Próxima página de opções">${icon("chevron")}</button></div>` : ""}<button class="icon-button dismiss" id="close" aria-label="Fechar launcher" title="Fechar (Esc)">${icon("close")}</button></div></div>
       <section class="branch ${!selected && !query ? "collapsed" : ""}" aria-label="Opções da categoria">
-        <header class="branch-heading"><button class="icon-button back-list" id="back-list" aria-label="Voltar às categorias">${icon("back")}</button><h1>${esc(trail.at(-1)?.title ?? categories.find((c) => c.id === selected)?.title ?? "Escolha uma categoria")}</h1><span class="count" aria-label="${listing.length} opções">${listing.length}</span><button class="icon-button branch-settings" id="branch-settings" aria-label="Configurações">${icon("settings")}</button></header>
+        <header class="branch-heading"><button class="icon-button back-list" id="back-list" aria-label="Voltar às categorias">${icon("back")}</button><h1>${esc(trail.at(-1)?.title ?? categories.find((c) => c.id === selected)?.title ?? "Escolha uma categoria")}</h1><span class="count" aria-label="${listing.length} opções">${listing.length}</span>${selected === "streaming" ? `<button class="icon-button branch-add" id="add-app" aria-label="Adicionar streaming" title="Adicionar streaming">${icon("plus")}</button>` : ""}<button class="icon-button branch-settings" id="branch-settings" aria-label="Configurações">${icon("settings")}</button></header>
         <svg class="connectors" viewBox="0 0 100 360" preserveAspectRatio="none" aria-hidden="true">${[45, 135, 225, 315].map((y) => `<path d="M0 180 C60 180 35 ${y} 100 ${y}"/>`).join("")}<circle cx="4" cy="180" r="4"/></svg>
-        <div class="branch-list">${listing.map(actionButton).join("")}${listing.length === 0 ? `<p class="empty-list">${selected === "games" ? "Adicione o executável do seu jogo para abrir por aqui." : "Guarde aqui as pastas dos seus projetos."}</p>` : ""}${selected === "projects" && !query ? `<button class="bubble add-project" id="add-project" aria-label="Adicionar projeto"><span class="app-icon">${icon("plus")}</span><span class="bubble-copy"><strong>Adicionar projeto</strong></span></button>` : ""}${["apps", "games", "streaming"].includes(selected ?? "") && !query ? `<button class="bubble add-project" id="add-app" aria-label="${selected === "games" ? "Adicionar jogo" : selected === "streaming" ? "Adicionar streaming" : "Adicionar aplicativo"}"><span class="app-icon">${icon("plus")}</span><span class="bubble-copy"><strong>${selected === "games" ? "Adicionar jogo" : selected === "streaming" ? "Adicionar streaming" : "Adicionar aplicativo"}</strong></span></button>` : ""}</div>
+        <div class="branch-list">${listing.map(actionButton).join("")}${listing.length === 0 ? `<p class="empty-list">${selected === "games" ? "Adicione o executável do seu jogo para abrir por aqui." : "Guarde aqui as pastas dos seus projetos."}</p>` : ""}${selected === "projects" && !query ? `<button class="bubble add-project" id="add-project" aria-label="Adicionar projeto"><span class="app-icon">${icon("plus")}</span><span class="bubble-copy"><strong>Adicionar projeto</strong></span></button>` : ""}${["apps", "games"].includes(selected ?? "") && !query ? `<button class="bubble add-project" id="add-app" aria-label="${selected === "games" ? "Adicionar jogo" : selected === "streaming" ? "Adicionar streaming" : "Adicionar aplicativo"}"><span class="app-icon">${icon("plus")}</span><span class="bubble-copy"><strong>${selected === "games" ? "Adicionar jogo" : selected === "streaming" ? "Adicionar streaming" : "Adicionar aplicativo"}</strong></span></button>` : ""}</div>
       </section>
     </div></main>`
         : `<div class="resting"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button><button class="primary" id="reopen">Abrir Orbit ${icon("arrow")}</button><p><kbd>${esc(hotkeyLabel(state.settings.hotkey))}</kbd></p></div>`
@@ -162,7 +222,12 @@ function bind() {
   for (const button of app.querySelectorAll<HTMLElement>("[data-mode-switch]"))
     button.onclick = () => {
       const mode: Mode = state.settings.mode === "main" ? "rest" : "main";
-      void updateSettings({ mode }).catch((e) => notify(String(e), true));
+      void updateSettings({ mode }).catch((e) => {
+        selected = compactLayout() ? null : defaultCategory();
+        wheelPage = 0;
+        if (!panel) render();
+        notify(String(e), true);
+      });
       wheelPage = 0;
       selected = compactLayout() ? null : defaultCategory();
       query = "";
@@ -196,6 +261,7 @@ function bind() {
         el.setAttribute("aria-pressed", String(el === button));
     };
   const openForm = (category: CategoryId, kind = "url", title = "") => {
+    if (!panel) rememberPanelOpener();
     panel = true;
     render();
     app.querySelector<HTMLSelectElement>("#shortcut-category")!.value =
@@ -250,14 +316,18 @@ function bind() {
     const hotkey = hotkeyInput?.dataset.hotkey;
     if (!hotkey) return;
     saveHotkey.disabled = true;
+    hotkeyInput!.disabled = true;
     try {
       await updateSettings({ hotkey });
-      await refresh();
-      render(true);
       notify("Atalho de teclado atualizado.");
     } catch (error) {
-      saveHotkey.disabled = false;
       notify(String(error), true);
+    } finally {
+      hotkeyInput!.disabled = false;
+      hotkeyInput!.value = hotkeyLabel(state.settings.hotkey);
+      delete hotkeyInput!.dataset.hotkey;
+      saveHotkey.disabled = true;
+      hotkeyInput!.focus({ preventScroll: true });
     }
   });
 
@@ -269,9 +339,14 @@ function bind() {
       query = "";
       trail = [];
       render(true);
-      app
-        .querySelector<HTMLElement>(`[data-category="${selected}"]`)
-        ?.focus({ preventScroll: true });
+      if (compactLayout())
+        focusVisible(
+          ".branch-list [data-item]",
+          "#add-project",
+          "#add-app",
+          "#back-list",
+        );
+      else focusVisible(`[data-category="${selected}"]`);
     };
   const back = () => {
     if (trail.length) trail.pop();
@@ -293,6 +368,7 @@ function bind() {
     "add-app",
   ])
     app.querySelector("#" + id)?.addEventListener("click", () => {
+      rememberPanelOpener();
       panel = true;
       render();
       app.querySelector<HTMLButtonElement>("#close-settings")?.focus();
@@ -307,14 +383,10 @@ function bind() {
         );
       }
     });
-  app.querySelector("#close-settings")?.addEventListener("click", () => {
-    panel = false;
-    render();
-  });
+  app.querySelector("#close-settings")?.addEventListener("click", closePanel);
   app.querySelector(".panel-backdrop")?.addEventListener("click", (e) => {
     if (e.target === e.currentTarget) {
-      panel = false;
-      render();
+      closePanel();
     }
   });
   app
@@ -324,7 +396,6 @@ function bind() {
         .value as Settings["trigger"];
       try {
         await updateSettings({ trigger });
-        await refresh();
         notify("Ativação atualizada.");
       } catch (error) {
         (e.target as HTMLSelectElement).value = state.settings.trigger;
@@ -352,11 +423,15 @@ function bind() {
       (app.querySelector("#url-field") as HTMLElement).hidden = local;
       const picker = app.querySelector<HTMLButtonElement>("#pick-folder")!;
       picker.hidden = !local;
+      const pathInput = app.querySelector<HTMLInputElement>("#folder-path")!;
+      // Category/mode changes reuse this handler but do not change the file type.
+      if (pathInput.dataset.kind !== kind) pathInput.value = "";
+      pathInput.dataset.kind = kind;
       picker.textContent =
-        kind === "executable"
+        pathInput.value ||
+        (kind === "executable"
           ? "Selecionar executável (.exe)"
-          : "Selecionar pasta";
-      app.querySelector<HTMLInputElement>("#folder-path")!.value = "";
+          : "Selecionar pasta");
       app.querySelector<HTMLInputElement>("#shortcut-url")!.required = !local;
       const category =
         app.querySelector<HTMLSelectElement>("#shortcut-category")!;
@@ -372,30 +447,51 @@ function bind() {
       category.disabled = false;
     });
   app.querySelector("#pick-folder")?.addEventListener("click", async () => {
+    if (pickingDestination) return;
+    const form = app.querySelector<HTMLFormElement>("#shortcut-form")!;
+    const kindInput = form.querySelector<HTMLSelectElement>("#shortcut-kind")!;
+    const picker = form.querySelector<HTMLButtonElement>("#pick-folder")!;
+    const pathInput = form.querySelector<HTMLInputElement>("#folder-path")!;
+    const title = form.querySelector<HTMLInputElement>("#shortcut-title")!;
+    const kind = kindInput.value;
+    pickingDestination = true;
+    picker.disabled = true;
     try {
-      const executable =
-        app.querySelector<HTMLSelectElement>("#shortcut-kind")!.value ===
-        "executable";
-      const path = await (executable ? chooseExecutable() : chooseFolder());
-      if (path) {
-        app.querySelector<HTMLInputElement>("#folder-path")!.value = path;
-        app.querySelector("#pick-folder")!.textContent = path;
-        const title = app.querySelector<HTMLInputElement>("#shortcut-title")!;
-        if (executable && !title.value)
-          title.value = (path.split(/[\\/]/).at(-1) ?? "Aplicativo")
-            .replace(/\.exe$/i, "")
-            .slice(0, 60);
+      const path = await (kind === "executable"
+        ? chooseExecutable()
+        : chooseFolder());
+      // An async dialog must never write into a different/reopened form.
+      if (path && form.isConnected && kindInput.value === kind) {
+        pathInput.value = path;
+        picker.textContent = path;
+        if (kind === "executable" && !title.value)
+          title.value = Array.from(
+            (path.split(/[\\/]/).at(-1) ?? "Aplicativo").replace(/\.exe$/i, ""),
+          )
+            .slice(0, 80)
+            .join("");
       }
     } catch (e) {
       notify(String(e), true);
+    } finally {
+      pickingDestination = false;
+      picker.disabled = false;
+      if (picker.isConnected) picker.focus({ preventScroll: true });
     }
   });
   app
     .querySelector<HTMLFormElement>("#shortcut-form")
     ?.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (addingShortcut || pickingDestination) return;
       const form = e.currentTarget as HTMLFormElement;
       const data = new FormData(form);
+      const submit = form.querySelector<HTMLButtonElement>(
+        'button[type="submit"]',
+      )!;
+      addingShortcut = true;
+      submit.disabled = true;
+      form.setAttribute("aria-busy", "true");
       const kind = data.get("kind") as "url" | "folder" | "executable";
       const value =
         kind === "url"
@@ -425,8 +521,13 @@ function bind() {
         }
         render();
         notify("Atalho adicionado à sua órbita.");
+        focusVisible("#shortcut-title");
       } catch (error) {
         notify(String(error), true);
+      } finally {
+        addingShortcut = false;
+        submit.disabled = false;
+        form.removeAttribute("aria-busy");
       }
     });
   for (const el of app.querySelectorAll<HTMLElement>("[data-remove]"))
@@ -485,10 +586,8 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.key === "Escape") {
-    if (panel) {
-      panel = false;
-      render();
-    } else void close();
+    if (panel) closePanel();
+    else void close();
   }
   if (e.key === "Tab" && panel) {
     const nodes = Array.from(

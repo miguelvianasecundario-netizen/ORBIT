@@ -12,7 +12,7 @@
   font-synthesis: none;
   color-scheme: dark;
   --ink: #f3fbff;
-  --muted: #b5ccd5;
+  --muted: #c2d5dd;
   --surface: #152c36f5;
   --edge: #b7e5e440;
   --mint: #9bf3d0;
@@ -139,6 +139,17 @@ button svg {
   position: relative;
   isolation: isolate;
 }
+/* Keep desktop text from competing with labels, including between the
+   sectors and the center. This works without cross-window backdrop blur. */
+.wheel::before {
+  content: "";
+  position: absolute;
+  inset: 3%;
+  border-radius: 50%;
+  background: var(--surface);
+  z-index: -1;
+  pointer-events: none;
+}
 .wheel-halo {
   position: absolute;
   inset: 5%;
@@ -193,6 +204,11 @@ button svg {
   color: var(--muted);
 }
 .category span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  flex-shrink: 0;
   font-size: 14px;
   line-height: 1.2;
   font-weight: 600;
@@ -298,6 +314,7 @@ button svg {
   flex-shrink: 0;
 }
 .branch-heading h1 {
+  min-width: 0;
   font-size: 16px;
   font-weight: 600;
   margin: 0;
@@ -449,7 +466,7 @@ kbd {
   font: inherit;
   font-size: 12px;
   border: 1px solid var(--edge);
-  background: #183c49;
+  background: var(--surface-solid);
   padding: 6px 9px;
   border-radius: 8px;
   color: var(--ink);
@@ -809,6 +826,9 @@ body.native {
   background: var(--hover);
 }
 .page-controls {
+  background: var(--surface-solid);
+  border: 1px solid var(--edge);
+  border-radius: 16px;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -1030,6 +1050,7 @@ body.native {
     grid-template-rows: 1fr 1fr;
     gap: 8px;
   }
+  .wheel::before,
   .wheel-glass,
   .wheel-halo,
   .core {
@@ -1075,4 +1096,21 @@ body.native {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Brand colors need dark variants on the light theme too. */
+:root[data-theme="paper"] .app-icon.youtube {
+  color: #b52d40;
+}
+:root[data-theme="paper"] .app-icon.chatgpt {
+  color: #14654a;
+}
+:root[data-theme="paper"] .app-icon.github {
+  color: #62428b;
+}
+:root[data-theme="paper"] .app-icon.google {
+  color: #245e98;
+}
+.branch-heading .branch-add {
+  box-shadow: none;
 }

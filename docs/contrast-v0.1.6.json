@@ -1,0 +1,25 @@
+{
+  "method": "Computed colors, alpha composited over black/white; WCAG sRGB; CSS blur disabled",
+  "metrics": [
+    {
+      "theme": "ocean",
+      "minTextContrast": 4.957792464562519,
+      "minIconContrast": 5.281618006953214
+    },
+    {
+      "theme": "amethyst",
+      "minTextContrast": 5.600184914016233,
+      "minIconContrast": 5.527776989616636
+    },
+    {
+      "theme": "graphite",
+      "minTextContrast": 5.244309327799612,
+      "minIconContrast": 5.443194034727383
+    },
+    {
+      "theme": "paper",
+      "minTextContrast": 5.235214552230617,
+      "minIconContrast": 4.717587242363947
+    }
+  ]
+}

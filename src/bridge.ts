@@ -98,8 +98,14 @@ export async function addShortcut(
   action: Action,
 ): Promise<MenuItem> {
   title = title.trim();
-  if (!title || title.length > 60)
-    throw new Error("O nome deve ter entre 1 e 60 caracteres.");
+  if (
+    !title ||
+    Array.from(title).length > 80 ||
+    /[\u0000-\u001f\u007f-\u009f]/u.test(title)
+  )
+    throw new Error(
+      "O nome deve ter entre 1 e 80 caracteres, sem caracteres de controle.",
+    );
   if (action.type === "url") action.value = validateUrl(action.value);
   if (native) return invoke("add_shortcut", { title, category, action });
   if (action.type === "folder" || action.type === "executable")

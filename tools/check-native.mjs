@@ -13,7 +13,7 @@ const fixture=spawnSync('rustc',[`${out}Aplicativo portatil/probe.rs`,'-o',`${ou
 if(fixture.status!==0)throw Error(fixture.stderr);
 const exe=process.argv[2];if(!exe)throw Error('Informe o executável a testar');
 const child=spawn(exe,[],{cwd:root,windowsHide:true,env:{...process.env,WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS:'--remote-debugging-port=9226 --remote-debugging-address=127.0.0.1'}});
-function input(action,args=[]){const r=spawnSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',`${root}tools/native-input.ps1`,'-OrbitProcessId',String(child.pid),'-Action',action,...args],{encoding:'utf8',windowsHide:true});if(r.status!==0)throw Error(r.stderr||r.stdout);return JSON.parse(r.stdout.trim());}
+function input(action,args=[]){const r=spawnSync('powershell.exe',['-NoProfile','-File',`${root}tools/native-input.ps1`,'-OrbitProcessId',String(child.pid),'-Action',action,...args],{encoding:'utf8',windowsHide:true});if(r.status!==0)throw Error(r.stderr||r.stdout);return JSON.parse(r.stdout.trim());}
 let browser,page,settings,custom,invoke;const checks=[];let logs='';child.stderr.on('data',d=>logs+=d);child.stdout.on('data',d=>logs+=d);
 try{
   for(let n=0;n<100;n++){try{if((await fetch('http://127.0.0.1:9226/json/version')).ok)break;}catch{}await delay(200);}
@@ -22,8 +22,8 @@ try{
   invoke=(cmd,args={})=>page.evaluate(({cmd,args})=>window.__TAURI_INTERNALS__.invoke(cmd,args),{cmd,args});
   settings=(await invoke('get_state')).settings;const errors=[];page.on('pageerror',e=>errors.push(String(e)));
   const metrics=await page.evaluate(()=>({w:innerWidth,h:innerHeight,dpr:devicePixelRatio,bg:getComputedStyle(document.body).backgroundColor}));
-  assert.equal(metrics.bg,'rgba(0, 0, 0, 0)');assert.equal(metrics.w,620);assert.equal(metrics.h,380);checks.push('Release Windows: 620x380 DIP, fundo externo transparente');
-  await page.screenshot({path:`${out}/ORBIT-0.1.4.png`,omitBackground:true});input('capture',['-OutputPath',`${out}/desktop.png`]);
+  assert.equal(metrics.bg,'rgba(0, 0, 0, 0)');assert.equal(metrics.w,720);assert.equal(metrics.h,440);checks.push('Release Windows: 720x440 DIP, fundo externo transparente');
+  await page.screenshot({path:`${out}/ORBIT-current.png`,omitBackground:true});input('capture',['-OutputPath',`${out}/desktop.png`]);
   for(const [x,y] of [[1,1],[1900,1],[1,1000],[1900,1000]]){
     input('move',['-X',String(x),'-Y',String(y)]);await invoke('frontend_ready');await delay(200);
     const fits=await page.evaluate(()=>{const r=document.querySelector('.launcher').getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1});assert.ok(fits);

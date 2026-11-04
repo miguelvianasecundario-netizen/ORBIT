@@ -1,26 +1,17 @@
-# Continuar ORBIT 0.1.5 em outro computador
+# Continuar ORBIT 0.1.6
 
-## Pedido implementado
-Enquadramento ampliado 720x440, temas Oceano/Ametista/Grafite/Papel, setas laterais Principal/Descanso, balanço de 200 ms, Streaming com seis serviços, Jogos com .exe e opções diretas na bola para pasta/link/executável (ex.: Livros). Páginas de quatro setores evitam diminuir os nomes.
+Fonte baseada no ZIP 0.1.5 enviado pelo usuário. Preserve `app.orbit.launcher`, os modos, os quatro temas, as categorias e os dados locais existentes.
 
-## Estado atual
-Código e release 0.1.5 gerados. 50 testes de interface e 23 Rust passaram; Clippy sem avisos. A versão abriu no Windows. Não confundir com a pasta antiga outputs/ORBIT (fonte 0.1.0); o código correto é o deste ZIP, originado de work/orbit-source.
+## Estado
 
-## O que falta
-1. Completar teste nativo: Jogos > Adicionar jogo > escolher .exe > salvar > abrir; verificar diretório de trabalho de jogo portátil.
-2. Completar teste nativo: Livros > escolher pasta > salvar > abrir pela bola; verificar cancelamento do seletor e persistência após reiniciar.
-3. O auxiliar tools/check-rest-native.mjs parou ao chamar tools/native-input.ps1, bloqueado pela política de scripts PowerShell. Usar o controle de interface disponível para continuar; não alterar políticas de segurança. Os testes Playwright já existentes rodam normalmente.
-4. Opcional de acabamento: substituir o botão Adicionar streaming no final da lista por um + no cabeçalho. Os seis serviços já cabem inteiros; esse botão extra requer rolagem.
-5. Testar instalador em ambiente limpo e DPI misto em múltiplos monitores.
+59 testes da interface, 23 do núcleo Rust, build TypeScript/Vite e Clippy do núcleo passaram. As correções e limites estão no README e em VALIDACAO.md. A nova fila de preferências aplica cada mudança sobre a última gravação confirmada; não voltar a enfileirar snapshots com alterações que falharam. Não recriar o formulário ao salvar o atalho global.
 
-## Abrir o aplicativo
-Extraia orbit-windows-x64-v0.1.5.zip e execute orbit.exe. Requer Windows 11 x64/WebView2. Encerre outra instância antes. Não é necessário compilar para usar.
+## Verificações restantes
 
-## Desenvolver
-Node 22.12+ ou 24, Rust MSVC, Build Tools C++/Windows SDK, WebView2. Execute npm.cmd ci; npm.cmd run tauri -- dev. Validação e build completos no README.md. Não publicar nem enviar mensagens a terceiros sem pedido.
+Executar os fluxos reais de pasta/.exe e hooks no Windows, monitores físicos com DPI misto e instalador NSIS. O teste da fronteira IPC no navegador não substitui esses fluxos. Respeitar a política de execução PowerShell vigente.
 
-## Dados existentes
-O código-fonte e o ZIP portátil não incluem os atalhos/histórico pessoais. Eles ficam em %LOCALAPPDATA%\app.orbit.launcher\orbit.sqlite3 no computador original. Para migrar também esses dados, encerre o ORBIT e copie o banco para o mesmo diretório do outro computador. Caminhos de jogos/pastas precisam existir no destino.
+## Arquivos principais
 
-## Arquitetura
-Tauri/Rust + TypeScript, sem React. Settings.theme/mode têm defaults compatíveis. Novas categorias games/streaming/orbit-main/orbit-rest reutilizam a tabela de atalhos. Exemplos de arquivos centrais: src/main.ts, src/radial.ts, src/settings.ts, src/style.css, src-tauri/src/persistence.rs, models.rs, actions.rs, window_geometry.rs. Plano e decisões em docs/0.1.5-design.md.
+`src/main.ts`: estado, fila de preferências, formulário e navegação. `src/style.css`: temas, base do círculo, limites de nomes e layout. `src-tauri/src/window_geometry.rs`: geometria compartilhada, testável também em Linux. `tests/regressions.spec.ts`: casos corrigidos. `tools/visual-preview.mjs`: composições e contraste sem depender de desfoque.
+
+Os ZIPs não contêm o banco pessoal. Ele continua em `%LOCALAPPDATA%\app.orbit.launcher\orbit.sqlite3`. Encerre o aplicativo antes de copiar esse banco; caminhos de arquivos precisam existir na máquina de destino.

@@ -6,6 +6,7 @@ mod native;
 pub mod persistence;
 #[cfg(windows)]
 mod window;
+pub mod window_geometry;
 #[cfg(windows)]
 mod desktop {
     use crate::{models::*, native::Listener, persistence::Database};

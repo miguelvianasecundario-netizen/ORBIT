@@ -1,6 +1,6 @@
 [package]
 name = "orbit"
-version = "0.1.5"
+version = "0.1.6"
 description = "Launcher radial local para Windows"
 authors = ["ORBIT"]
 edition = "2021"
