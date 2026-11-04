@@ -16,8 +16,8 @@ fn db_error(error: impl std::fmt::Display) -> String {
     format!("Não foi possível acessar os dados locais: {error}")
 }
 
-/// Validate and normalize the two user-configurable action types. This validation
-/// must run again before launching: a previously saved directory may disappear.
+/// Validate and normalize user-configurable actions. Run this again at execution:
+/// an executable or directory may have disappeared since the shortcut was saved.
 pub fn validate_action(action: Action) -> Result<Action, String> {
     match action {
         Action::Url { value } => {
@@ -53,6 +53,38 @@ pub fn validate_action(action: Action) -> Result<Action, String> {
                 })?
                 .to_string();
             Ok(Action::Folder { value })
+        }
+        Action::Executable { value } => {
+            if value.is_empty() || value.chars().any(char::is_control) {
+                return Err("Selecione um arquivo executável .exe existente.".into());
+            }
+            let requested = Path::new(&value);
+            if !requested.is_absolute() {
+                return Err("O executável precisa ter um caminho absoluto.".into());
+            }
+            let is_exe = |path: &Path| {
+                path.extension()
+                    .and_then(|extension| extension.to_str())
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("exe"))
+            };
+            if !is_exe(requested) {
+                return Err(
+                    "Escolha um arquivo .exe, sem argumentos ou comandos adicionais.".into(),
+                );
+            }
+            let canonical = requested
+                .canonicalize()
+                .map_err(|_| "O executável não existe ou não está acessível.".to_string())?;
+            if !canonical.is_file() || !is_exe(&canonical) {
+                return Err("O caminho selecionado não é um arquivo executável .exe.".into());
+            }
+            let value = canonical
+                .to_str()
+                .ok_or_else(|| {
+                    "O caminho do executável não pode ser representado em UTF-8.".to_string()
+                })?
+                .to_string();
+            Ok(Action::Executable { value })
         }
     }
 }
@@ -216,14 +248,38 @@ impl Database {
         }
         if !matches!(
             category.as_str(),
-            "browser" | "apps" | "projects" | "actions"
+            "browser"
+                | "apps"
+                | "projects"
+                | "actions"
+                | "games"
+                | "streaming"
+                | "orbit-main"
+                | "orbit-rest"
         ) {
             return Err("Categoria inválida.".into());
         }
         let action = validate_action(action)?;
+        if matches!(action, Action::Executable { .. })
+            && !matches!(
+                category.as_str(),
+                "apps" | "games" | "orbit-main" | "orbit-rest"
+            )
+        {
+            return Err(
+                "Adicione executáveis em Aplicativos, Jogos ou diretamente na bola.".into(),
+            );
+        }
         let icon = match &action {
             Action::Url { .. } => "globe",
             Action::Folder { .. } => "folder",
+            Action::Executable { .. } => {
+                if category == "games" {
+                    "gamepad"
+                } else {
+                    "grid"
+                }
+            }
         }
         .to_string();
         let shortcut = Shortcut {
@@ -234,7 +290,14 @@ impl Database {
             action,
         };
         let raw_action = serde_json::to_string(&shortcut.action).map_err(db_error)?;
-        self.lock()?
+        let connection = self.lock()?;
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM shortcuts", [], |row| row.get(0))
+            .map_err(db_error)?;
+        if count >= 100 {
+            return Err("Limite de 100 atalhos atingido.".into());
+        }
+        connection
             .execute(
                 "INSERT INTO shortcuts(id,title,icon,category,action) VALUES(?1,?2,?3,?4,?5)",
                 params![
@@ -422,6 +485,85 @@ mod tests {
     }
 
     #[test]
+    fn executables_require_existing_absolute_exe_files_without_arguments() {
+        let directory = std::env::temp_dir().join(format!("orbit-executables-{}", Uuid::new_v4()));
+        std::fs::create_dir(&directory).unwrap();
+        let executable = directory.join("Meu Aplicativo.EXE");
+        std::fs::write(&executable, "validation fixture, never launched").unwrap();
+        let valid = validate_action(Action::Executable {
+            value: executable.to_string_lossy().into(),
+        })
+        .unwrap();
+        assert_eq!(
+            valid,
+            Action::Executable {
+                value: executable.canonicalize().unwrap().to_string_lossy().into(),
+            }
+        );
+        let folder = directory.join("directory.exe");
+        std::fs::create_dir(&folder).unwrap();
+        for extension in ["bat", "cmd", "com", "ps1", "lnk"] {
+            let path = directory.join(format!("file.{extension}"));
+            std::fs::write(&path, "not an executable shortcut").unwrap();
+            assert!(validate_action(Action::Executable {
+                value: path.to_string_lossy().into()
+            })
+            .is_err());
+        }
+        for value in [
+            "relative.exe".to_string(),
+            directory.join("missing.exe").to_string_lossy().into(),
+            folder.to_string_lossy().into(),
+            format!("{} --untrusted-argument", executable.display()),
+            format!("{}\0", executable.display()),
+        ] {
+            assert!(validate_action(Action::Executable { value }).is_err());
+        }
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn executable_shortcuts_are_limited_to_apps_and_revalidated_after_removal() {
+        let directory = std::env::temp_dir().join(format!("orbit-app-shortcut-{}", Uuid::new_v4()));
+        std::fs::create_dir(&directory).unwrap();
+        let executable = directory.join("Program.exe");
+        std::fs::write(&executable, "validation fixture, never launched").unwrap();
+        let action = Action::Executable {
+            value: executable.to_string_lossy().into(),
+        };
+        let db = memory_db();
+        for category in ["browser", "projects", "actions"] {
+            assert!(db
+                .add_shortcut("Program".into(), category.into(), action.clone())
+                .is_err());
+        }
+        let shortcut = db
+            .add_shortcut("Program".into(), "apps".into(), action)
+            .unwrap();
+        assert_eq!(
+            db.find_shortcut(&shortcut.id).unwrap(),
+            Some(shortcut.clone())
+        );
+        assert_eq!(db.snapshot().unwrap().shortcuts.len(), 1);
+        std::fs::remove_file(&executable).unwrap();
+        assert!(validate_action(shortcut.action).is_err());
+        assert!(crate::actions::execute(&shortcut.id, &db).is_err());
+        assert!(db.snapshot().unwrap().usage.is_empty());
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn executable_action_does_not_accept_a_command_or_arguments_field() {
+        assert!(serde_json::from_str::<Action>(
+            r#"{"type":"executable","value":"C:\\Program.exe","args":["/c","echo"]}"#
+        )
+        .is_err());
+        assert!(
+            serde_json::from_str::<Action>(r#"{"type":"command","value":"cmd /c echo"}"#).is_err()
+        );
+    }
+
+    #[test]
     fn old_preferences_keep_working_and_gain_default_hotkey() {
         let db = memory_db();
         db.lock()
@@ -434,6 +576,87 @@ mod tests {
         let state = db.snapshot().unwrap();
         assert_eq!(state.settings.trigger, "middle");
         assert_eq!(state.settings.hotkey, "Ctrl+Alt+Space");
+        assert_eq!(state.settings.theme, "ocean");
+        assert_eq!(state.settings.mode, "main");
+    }
+
+    #[test]
+    fn themes_modes_and_wheel_shortcuts_survive_reopening() {
+        let directory = std::env::temp_dir().join(format!("orbit-rest-{}", Uuid::new_v4()));
+        std::fs::create_dir(&directory).unwrap();
+        let exe = directory.join("Game.exe");
+        std::fs::write(&exe, "fixture, never launched").unwrap();
+        let path = directory.join("data.sqlite3");
+        {
+            let db = Database::open(&path).unwrap();
+            db.save_settings(Settings {
+                theme: "paper".into(),
+                mode: "rest".into(),
+                ..Settings::default()
+            })
+            .unwrap();
+            db.add_shortcut(
+                "Livros".into(),
+                "orbit-rest".into(),
+                Action::Folder {
+                    value: directory.to_string_lossy().into(),
+                },
+            )
+            .unwrap();
+            for category in ["games", "orbit-main", "orbit-rest"] {
+                db.add_shortcut(
+                    "Game".into(),
+                    category.into(),
+                    Action::Executable {
+                        value: exe.to_string_lossy().into(),
+                    },
+                )
+                .unwrap();
+            }
+            db.add_shortcut(
+                "Streaming".into(),
+                "streaming".into(),
+                Action::Url {
+                    value: "https://example.com/".into(),
+                },
+            )
+            .unwrap();
+        }
+        {
+            let db = Database::open(&path).unwrap();
+            let state = db.snapshot().unwrap();
+            assert_eq!(state.settings.theme, "paper");
+            assert_eq!(state.settings.mode, "rest");
+            assert_eq!(state.shortcuts.len(), 5);
+            std::fs::remove_file(&exe).unwrap();
+            assert!(crate::actions::execute(&state.shortcuts[1].id, &db).is_err());
+            assert!(db.snapshot().unwrap().usage.is_empty());
+        }
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn unknown_themes_modes_and_executable_categories_are_rejected() {
+        let db = memory_db();
+        for theme in ["ocean", "amethyst", "graphite", "paper"] {
+            db.save_settings(Settings {
+                theme: theme.into(),
+                ..Settings::default()
+            })
+            .unwrap();
+        }
+        assert!(db
+            .save_settings(Settings {
+                theme: "missing".into(),
+                ..Settings::default()
+            })
+            .is_err());
+        assert!(db
+            .save_settings(Settings {
+                mode: "missing".into(),
+                ..Settings::default()
+            })
+            .is_err());
     }
 
     #[test]
@@ -446,6 +669,7 @@ mod tests {
             db.save_settings(Settings {
                 trigger: "middle".into(),
                 hotkey: "F8".into(),
+                ..Settings::default()
             })
             .unwrap();
             db.record_use("browser-youtube").unwrap();

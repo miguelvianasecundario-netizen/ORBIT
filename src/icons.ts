@@ -1,4 +1,12 @@
 const paths: Record<string, string> = {
+  moon: '<path d="M20.5 13A9 9 0 0 1 11 3.5 9 9 0 1 0 20.5 13Z"/>',
+  book: '<path d="M12 5C8 2 4 3 2 4v15c4-2 7-1 10 1 3-2 6-3 10-1V4c-4-2-7-1-10 1Zm0 0v15"/>',
+  play: '<rect x="2" y="4" width="20" height="15" rx="4"/><path d="m10 8 5 3.5-5 3.5Z"/>',
+  gamepad:
+    '<path d="M7 7h10c3 0 4 3 5 9 .5 4-3 4-5 1H7c-2 3-5.5 3-5-1 1-6 2-9 5-9Z"/><path d="M7 10v5m-2.5-2.5h5M16 11h.01M19 14h.01"/>',
+  palette:
+    '<circle cx="12" cy="12" r="9"/><circle cx="8" cy="8" r="1"/><circle cx="16" cy="8" r="1"/><circle cx="7" cy="14" r="1"/><path d="M17 14c-7-2-6 5-2 6"/>',
+  chevronLeft: '<path d="m15 6-6 6 6 6"/>',
   orbit:
     '<ellipse cx="12" cy="12" rx="11" ry="5" transform="rotate(-35 12 12)"/><circle cx="12" cy="12" r="3"/><circle cx="20" cy="5" r="1.5" fill="currentColor"/>',
   globe:

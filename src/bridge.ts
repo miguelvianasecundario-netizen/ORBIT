@@ -1,7 +1,7 @@
 import { DEFAULT_HOTKEY } from "./hotkey";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { items } from "./data";
+import { items, themes, categories } from "./data";
 import type {
   Action,
   CategoryId,
@@ -14,7 +14,12 @@ const key = "orbit.local.v1";
 function empty(): OrbitState {
   return {
     usage: {},
-    settings: { trigger: "alt-middle", hotkey: DEFAULT_HOTKEY },
+    settings: {
+      trigger: "alt-middle",
+      hotkey: DEFAULT_HOTKEY,
+      theme: "ocean",
+      mode: "main",
+    },
     shortcuts: [],
   };
 }
@@ -42,6 +47,10 @@ function read(): OrbitState {
     )
       throw Error();
     value.settings.hotkey ??= DEFAULT_HOTKEY;
+    if (!themes.some((t) => t.id === value.settings.theme))
+      value.settings.theme = "ocean";
+    if (!["main", "rest"].includes(value.settings.mode))
+      value.settings.mode = "main";
     return value;
   } catch {
     throw new Error(
@@ -93,13 +102,18 @@ export async function addShortcut(
     throw new Error("O nome deve ter entre 1 e 60 caracteres.");
   if (action.type === "url") action.value = validateUrl(action.value);
   if (native) return invoke("add_shortcut", { title, category, action });
-  if (action.type === "folder")
+  if (action.type === "folder" || action.type === "executable")
     throw new Error(
-      "Adicionar uma pasta requer o aplicativo desktop no Windows.",
+      "Adicionar pastas ou executáveis requer o aplicativo desktop no Windows.",
     );
   const state = read();
   if (state.shortcuts.length >= 100)
     throw new Error("Limite de 100 atalhos atingido.");
+  if (
+    !categories.some((c) => c.id === category) &&
+    !["orbit-main", "orbit-rest"].includes(category)
+  )
+    throw new Error("Categoria inválida.");
   const item: MenuItem = {
     id: crypto.randomUUID(),
     title,
@@ -134,7 +148,25 @@ export async function chooseFolder(): Promise<string | null> {
     const selected = await open({
       directory: true,
       multiple: false,
-      title: "Escolha uma pasta de projeto",
+      title: "Escolha a pasta que o ORBIT deve abrir",
+    });
+    return typeof selected === "string" ? selected : null;
+  } finally {
+    await invoke("set_dialog_active", { active: false });
+  }
+}
+export async function chooseExecutable(): Promise<string | null> {
+  if (!native)
+    throw new Error(
+      "Selecionar executáveis .exe requer o aplicativo desktop no Windows.",
+    );
+  await invoke("set_dialog_active", { active: true });
+  try {
+    const selected = await open({
+      directory: false,
+      multiple: false,
+      title: "Escolha um aplicativo Windows",
+      filters: [{ name: "Aplicativo Windows", extensions: ["exe"] }],
     });
     return typeof selected === "string" ? selected : null;
   } finally {

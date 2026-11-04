@@ -1,6 +1,16 @@
-export type CategoryId = "browser" | "apps" | "projects" | "actions";
+export type Mode = "main" | "rest";
+export type Theme = "ocean" | "amethyst" | "graphite" | "paper";
+export type CategoryId =
+  | "browser"
+  | "apps"
+  | "projects"
+  | "actions"
+  | "games"
+  | "streaming"
+  | "orbit-main"
+  | "orbit-rest";
 export interface Action {
-  type: "url" | "folder";
+  type: "url" | "folder" | "executable";
   value: string;
 }
 export interface MenuItem {
@@ -15,6 +25,8 @@ export interface MenuItem {
 export interface Settings {
   hotkey: string;
   trigger: "middle" | "alt-middle" | "keyboard";
+  theme: Theme;
+  mode: Mode;
 }
 export interface Usage {
   count: number;

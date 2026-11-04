@@ -4,8 +4,15 @@ use windows_sys::Win32::{
     Graphics::Gdi::{GetMonitorInfoW, MonitorFromPoint, MONITORINFO, MONITOR_DEFAULTTONEAREST},
     UI::WindowsAndMessaging::GetCursorPos,
 };
+#[path = "window_geometry.rs"]
+mod geometry;
+use geometry::{placement, WorkArea};
 
 pub fn activate(app: &AppHandle) -> Result<(), String> {
+    // Do not replace the form while a native file/folder picker owns it.
+    if crate::desktop::dialog_active() {
+        return Ok(());
+    }
     let window = app
         .get_webview_window("main")
         .ok_or("Janela indisponível.")?;
@@ -41,22 +48,31 @@ pub fn activate(app: &AppHandle) -> Result<(), String> {
         .map(|m| m.scale_factor())
         .unwrap_or(1.0);
     let r = info.rcWork;
-    let width = (380.0 * scale).round().min((r.right - r.left) as f64) as u32;
-    let height = (264.0 * scale).round().min((r.bottom - r.top) as f64) as u32;
-    let left = point.x > r.left + (r.right - r.left) / 2;
-    let center_x = if left { 0.70 } else { 0.30 };
-    let x = (point.x - (width as f64 * center_x) as i32).clamp(r.left, r.right - width as i32);
-    let y = (point.y - (height as f64 * 0.44) as i32).clamp(r.top, r.bottom - height as i32);
+    let p = placement(
+        (point.x, point.y),
+        WorkArea {
+            left: r.left,
+            top: r.top,
+            right: r.right,
+            bottom: r.bottom,
+        },
+        scale,
+    )?;
+    // Enter the target monitor before sizing. A DPI transition can otherwise
+    // resize a window that was already fitted to the new monitor's work area.
     window
-        .set_size(PhysicalSize::new(width, height))
+        .set_position(PhysicalPosition::new(p.x, p.y))
         .map_err(|e| e.to_string())?;
     window
-        .set_position(PhysicalPosition::new(x, y))
+        .set_size(PhysicalSize::new(p.width, p.height))
+        .map_err(|e| e.to_string())?;
+    window
+        .set_position(PhysicalPosition::new(p.x, p.y))
         .map_err(|e| e.to_string())?;
     window
         .emit(
             "orbit:activate",
-            serde_json::json!({"branchSide":if left{"left"}else{"right"}}),
+            serde_json::json!({"branchSide":if p.branch_left{"left"}else{"right"}}),
         )
         .map_err(|e| e.to_string())?;
     window.show().map_err(|e| e.to_string())?;

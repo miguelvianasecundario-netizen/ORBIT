@@ -13,6 +13,17 @@ pub struct Settings {
     pub trigger: String,
     #[serde(default = "crate::hotkey::default_hotkey")]
     pub hotkey: String,
+    #[serde(default = "default_theme")]
+    pub theme: String,
+    #[serde(default = "default_mode")]
+    pub mode: String,
+}
+
+fn default_theme() -> String {
+    "ocean".into()
+}
+fn default_mode() -> String {
+    "main".into()
 }
 
 impl Default for Settings {
@@ -20,12 +31,23 @@ impl Default for Settings {
         Self {
             trigger: "alt-middle".into(),
             hotkey: crate::hotkey::default_hotkey(),
+            theme: default_theme(),
+            mode: default_mode(),
         }
     }
 }
 
 impl Settings {
     pub fn validate(&self) -> Result<(), String> {
+        if !matches!(
+            self.theme.as_str(),
+            "ocean" | "amethyst" | "graphite" | "paper"
+        ) {
+            return Err("Tema inválido.".into());
+        }
+        if !matches!(self.mode.as_str(), "main" | "rest") {
+            return Err("Modo inválido.".into());
+        }
         match self.trigger.as_str() {
             "middle" | "alt-middle" | "keyboard" => crate::hotkey::parse(&self.hotkey).map(|_| ()),
             _ => Err("Acionamento inválido.".into()),
@@ -38,6 +60,7 @@ impl Settings {
 pub enum Action {
     Url { value: String },
     Folder { value: String },
+    Executable { value: String },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

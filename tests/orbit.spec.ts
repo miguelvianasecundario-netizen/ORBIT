@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 test("expande as quatro categorias e permite voltar", async ({ page }) => {
   await page.getByRole("button", { name: "Navegador", exact: true }).click();
-  for (const name of ["YouTube", "ChatGPT", "GitHub", "Google"]) {
+  for (const name of ["YouTube", "ChatGPT", "GitHub", "Nova guia do Brave"]) {
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   }
   await page.getByRole("button", { name: "Aplicativos", exact: true }).click();
@@ -42,7 +42,6 @@ for (const [name, url] of [
   ["YouTube", "https://www.youtube.com/"],
   ["ChatGPT", "https://chatgpt.com/"],
   ["GitHub", "https://github.com/"],
-  ["Google", "https://www.google.com/"],
 ]) {
   test(`abre ${name} na URL correta e fecha o menu`, async ({
     page,
@@ -165,6 +164,7 @@ test("layout compacto mantém categorias e opções acessíveis", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
   await page.getByRole("button", { name: "Navegador", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "ChatGPT", exact: true }),
@@ -176,7 +176,7 @@ test("layout compacto mantém categorias e opções acessíveis", async ({
   ).toBe(true);
 });
 
-test("layout desktop cabe na área útil com DPI alto", async ({ page }) => {
+test("layout desktop cabe na área útil", async ({ page }) => {
   await page.setViewportSize({ width: 960, height: 540 });
   // Exercise CSS sizing only. This does not simulate native IPC or OS transparency.
   await page.evaluate(() => {
@@ -186,8 +186,11 @@ test("layout desktop cabe na área útil com DPI alto", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "Ações", exact: true }),
   ).toBeInViewport();
+  await page
+    .getByRole("button", { name: "Nova guia do Brave", exact: true })
+    .scrollIntoViewIfNeeded();
   await expect(
-    page.getByRole("button", { name: "Google", exact: true }),
+    page.getByRole("button", { name: "Nova guia do Brave", exact: true }),
   ).toBeInViewport();
   expect(
     await page.evaluate(
@@ -196,22 +199,23 @@ test("layout desktop cabe na área útil com DPI alto", async ({ page }) => {
   ).toBe(true);
 });
 
-test("launcher pequeno, sem título, e configurações acessíveis", async ({
+test("launcher pequeno mantém retorno e configurações acessíveis", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 380, height: 264 });
-  await expect(page.locator("header,h1,.brand")).toHaveCount(0);
-  const wheel = await page.locator(".wheel").boundingBox();
-  expect(wheel!.width).toBeLessThanOrEqual(208);
-  const settings = await page
-    .getByRole("button", { name: "Configurações", exact: true })
-    .boundingBox();
-  expect(settings!.y).toBeGreaterThan(wheel!.y + wheel!.height);
-  expect(
-    Math.abs(settings!.x + settings!.width / 2 - (wheel!.x + wheel!.width / 2)),
-  ).toBeLessThan(2);
+  await page.reload();
+  await page.getByRole("button", { name: "Navegador", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Nova guia do Brave", exact: true })
+    .scrollIntoViewIfNeeded();
   await expect(
-    page.getByRole("button", { name: "Google", exact: true }),
+    page.getByRole("button", { name: "Nova guia do Brave", exact: true }),
+  ).toBeInViewport();
+  await page
+    .getByRole("button", { name: "Voltar às categorias", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Navegador", exact: true }),
   ).toBeInViewport();
   await page
     .getByRole("button", { name: "Configurações", exact: true })

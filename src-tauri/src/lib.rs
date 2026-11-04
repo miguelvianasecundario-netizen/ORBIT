@@ -14,6 +14,9 @@ mod desktop {
         Mutex,
     };
     static DIALOG_ACTIVE: AtomicBool = AtomicBool::new(false);
+    pub(super) fn dialog_active() -> bool {
+        DIALOG_ACTIVE.load(Ordering::Relaxed)
+    }
     #[tauri::command]
     fn set_dialog_active(active: bool, window: tauri::WebviewWindow) -> Result<(), String> {
         DIALOG_ACTIVE.store(active, Ordering::Relaxed);
@@ -29,6 +32,14 @@ mod desktop {
         Manager, State,
     };
     struct NativeState(Mutex<Option<Listener>>);
+    #[tauri::command]
+    fn frontend_ready(app: tauri::AppHandle) -> Result<(), String> {
+        crate::window::activate(&app)
+    }
+    #[tauri::command]
+    fn quit_orbit(app: tauri::AppHandle) {
+        app.exit(0);
+    }
     #[tauri::command]
     fn get_state(db: State<Database>) -> Result<StateSnapshot, String> {
         db.snapshot()
@@ -71,6 +82,8 @@ mod desktop {
             .plugin(tauri_plugin_dialog::init())
             .invoke_handler(tauri::generate_handler![
                 get_state,
+                frontend_ready,
+                quit_orbit,
                 execute_action,
                 hide_launcher,
                 save_settings,
