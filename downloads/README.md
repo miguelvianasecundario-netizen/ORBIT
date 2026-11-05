@@ -1,24 +1,24 @@
-# ORBIT 0.1.6 — Windows x64
+# ORBIT 0.1.7 — Work
 
-[**Baixar o aplicativo**](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-windows-x64-v0.1.6.zip) · [**Baixar o código-fonte**](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-codigo-fonte-v0.1.6.zip)
+[**Baixar para Windows x64**](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-windows-x64-v0.1.7.zip) · [**Baixar o código-fonte**](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-codigo-fonte-v0.1.7.zip)
 
-Baseado no código-fonte 0.1.5 enviado pelo usuário. Preserva modos Principal/Descanso, quatro temas, jogos, pastas, atalhos e dados locais.
+- Terceiro menu **Work**, com **Abrir tudo** e resultado por atalho.
+- Adicione links, pastas e executáveis em qualquer menu/categoria. Ícones obtidos automaticamente.
+- Integração com Brave para reconhecer URLs já abertas no perfil conectado e abrir somente as ausentes em segundo plano.
+- Solicita apps minimizados, preserva os que já estão rodando e mantém Principal/Descanso, temas e dados anteriores.
 
-- Corrige duplicação de cadastro, perda da seleção de pasta/.exe e perda do rascunho ao salvar o atalho global.
-- Falhas de atalho global deixam as outras preferências continuarem salvando; foco de teclado acompanha a navegação.
-- Nomes longos ficam dentro dos setores. Base do círculo, texto secundário e ícones claros ganharam contraste.
-- O + para adicionar streaming fica no cabeçalho.
+1. Encerre o Orbit anterior pela bandeja.
+2. Extraia todos os arquivos e abra `orbit.exe`, com `WebView2Loader.dll` junto dele.
+3. Para os sites do Work: **engrenagem → Preparar extensão do Brave**, depois `brave://extensions` → Modo de desenvolvedor → Carregar sem compactação. Selecione a pasta aberta pelo Orbit.
 
-![Prévia composta no Chromium, sem desfoque; não é captura nativa do Windows](orbit-v0.1.6-preview.png)
+[Guia da extensão](../browser-extension/README.md) · [Relatório dos testes](../VALIDACAO.md)
 
-1. Encerre a versão anterior pela bandeja → **Encerrar Orbit**.
-2. Extraia **todos os arquivos** e abra `orbit.exe`, com `WebView2Loader.dll` junto dele.
-3. Abra com **Alt + clique central** ou seu atalho salvo. Suas preferências são preservadas.
+Foram cobertos 72 casos de interface, 32 testes Rust e 5 testes da extensão, além do host Rust e compilação. O executável foi compilado em Linux; conexão completa com Brave real, ícones nativos e minimização/foco ainda precisam de validação no Windows. Alguns programas podem ignorar a solicitação de minimizar.
 
-**59 testes da interface e 23 Rust passaram**, além do build e Clippy do núcleo. Após o acabamento final, 21 testes afetados foram repetidos e passaram. O executável foi compilado em Linux para Windows x64; execução nativa da 0.1.6, seletores reais e monitores físicos ainda precisam de validação no Windows. [Relatório completo](../VALIDACAO.md).
+![Prévia composta no Chromium; não é captura nativa do Windows](orbit-v0.1.7-preview.png)
 
-Requer Windows 11 x64 e WebView2 Runtime. Pacote portátil sem assinatura digital.
+Requer Windows 11 x64 e WebView2. Pacote portátil sem assinatura digital.
 
-SHA-256 do aplicativo: `eed026c9cd83d5b3d8b535332426596f685d7c1dd392bf112cde564998b93a89`. [Checksum do código-fonte](orbit-codigo-fonte-v0.1.6.sha256).
+SHA-256 do aplicativo: `398084543268ae4f30e31c1efa7f8e0b015167ee9d3aef9dc2ba7855ced4c3e7`. [Checksum do código-fonte](orbit-codigo-fonte-v0.1.7.sha256).
 
-Código da compilação: `ecf246d38d5f861b6a7b084c1ff0fd9ab3a39379`. A branch `main` foi preservada. [Download anterior 0.1.3](orbit-windows-x64-v0.1.3.zip).
+Fonte: `af3f989abc4bd90868a0bc54ef44e65147ddba81`. [Versão anterior 0.1.6](orbit-windows-x64-v0.1.6.zip).
