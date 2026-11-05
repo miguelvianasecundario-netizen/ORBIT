@@ -3,8 +3,8 @@ use crate::{
     persistence::{validate_action, Database},
 };
 
-pub fn execute(id: &str, db: &Database) -> Result<(), String> {
-    let url = match id {
+pub fn builtin_url(id: &str) -> Option<&'static str> {
+    match id {
         "browser-youtube" => Some("https://www.youtube.com/"),
         "browser-chatgpt" => Some("https://chatgpt.com/"),
         "browser-github" => Some("https://github.com/"),
@@ -15,8 +15,10 @@ pub fn execute(id: &str, db: &Database) -> Result<(), String> {
         "streaming-apple" => Some("https://tv.apple.com/br"),
         "streaming-globo" => Some("https://globoplay.globo.com/"),
         _ => None,
-    };
-    if let Some(url) = url {
+    }
+}
+pub fn execute(id: &str, db: &Database) -> Result<(), String> {
+    if let Some(url) = builtin_url(id) {
         return launch_target(url);
     }
     match id {
@@ -31,15 +33,7 @@ pub fn execute(id: &str, db: &Database) -> Result<(), String> {
             let shortcut = db.find_shortcut(id)?.ok_or("Atalho desconhecido.")?;
             match validate_action(shortcut.action)? {
                 Action::Url { value } | Action::Folder { value } => launch_target(&value),
-                Action::Executable { value } => {
-                    if !matches!(
-                        shortcut.category.as_str(),
-                        "apps" | "games" | "orbit-main" | "orbit-rest"
-                    ) {
-                        return Err("Categoria inválida para executável.".into());
-                    }
-                    executable(&value)
-                }
+                Action::Executable { value } => executable(&value),
             }
         }
     }
@@ -56,7 +50,7 @@ fn launch_target(value: &str) -> Result<(), String> {
     if value.contains('\0') {
         return Err("Destino inválido.".into());
     }
-    let target = wide(value);
+    let target = wide(&crate::windows_paths::shell_path(value));
     let verb = wide("open");
     let result = unsafe {
         ShellExecuteW(

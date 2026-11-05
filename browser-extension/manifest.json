@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Orbit Work — Brave",
+  "version": "0.1.7",
+  "description": "Abre os sites do Work em segundo plano e evita duplicar URLs no perfil conectado.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArGCl5o7NebmRdf6ZqkEvRj5sUxOftbbdSEUO0H4TZxxYeeDIRNzsp+lF8s5Yy6tbfkJqpMld/AUkBLpkpUL330neWTiKy9n3Q6MZS78m35gnxPMkxrFDM5gRrD+kWp9MpfWKRZgF339nfMU1aw9xrRy9xtZac9UZ2ofb1v9nmA0IQQnwn4QGzdBS8mIGRbnYKa5cw5ATIVKD4hjolmgaHXsCJzgJD7sgIVHiAgiOh732C4GZMq89agFAF3921CeaO3+fDTqAt7J6Uj5FSqzeTgMuvuFjDOsmSX0Y2sd5Rd8q0AyRGVDfIn3FK30zh3Zt7GlxluPTwgemiwx78GMT8wIDAQAB",
+  "permissions": ["tabs", "nativeMessaging", "alarms"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Orbit Work",
+    "default_popup": "popup.html"
+  }
+}

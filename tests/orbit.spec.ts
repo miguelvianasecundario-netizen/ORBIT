@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test.use({ baseURL: "http://127.0.0.1:1420" });
 

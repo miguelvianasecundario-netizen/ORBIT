@@ -49,7 +49,7 @@ function read(): OrbitState {
     value.settings.hotkey ??= DEFAULT_HOTKEY;
     if (!themes.some((t) => t.id === value.settings.theme))
       value.settings.theme = "ocean";
-    if (!["main", "rest"].includes(value.settings.mode))
+    if (!["main", "rest", "work"].includes(value.settings.mode))
       value.settings.mode = "main";
     return value;
   } catch {
@@ -64,7 +64,25 @@ function write(state: OrbitState) {
 export const loadState = (): Promise<OrbitState> =>
   native ? invoke("get_state") : Promise.resolve().then(read);
 export async function execute(item: MenuItem) {
-  if (native) return invoke<void>("execute_action", { id: item.id });
+  if (native) {
+    if (
+      ["work-apps", "work-browser", "work-projects", "orbit-work"].includes(
+        item.category,
+      )
+    ) {
+      const report = await invoke<import("./types").WorkReport>(
+        "launch_work_item",
+        { id: item.id },
+      );
+      const result = report.results[0];
+      if (!result || result.status === "error")
+        throw new Error(
+          result?.detail ?? "Não foi possível abrir o atalho do Work.",
+        );
+      return;
+    }
+    return invoke<void>("execute_action", { id: item.id });
+  }
   if (item.action?.type !== "url")
     throw new Error(
       "Esta ação precisa do Orbit desktop no Windows. No navegador, os links e a personalização estão disponíveis.",
@@ -117,7 +135,7 @@ export async function addShortcut(
     throw new Error("Limite de 100 atalhos atingido.");
   if (
     !categories.some((c) => c.id === category) &&
-    !["orbit-main", "orbit-rest"].includes(category)
+    !["orbit-main", "orbit-rest", "orbit-work"].includes(category)
   )
     throw new Error("Categoria inválida.");
   const item: MenuItem = {
@@ -181,4 +199,23 @@ export async function chooseExecutable(): Promise<string | null> {
 }
 export function allItems(state: OrbitState) {
   return [...items, ...state.shortcuts];
+}
+
+export async function browserStatus(): Promise<
+  import("./types").BrowserStatus
+> {
+  return native
+    ? invoke("browser_status")
+    : { connected: false, prepared: false };
+}
+export async function prepareBrowser(): Promise<string> {
+  if (!native) throw new Error("Conectar o Brave requer o Orbit no Windows.");
+  return invoke("prepare_browser");
+}
+export async function launchWork(): Promise<import("./types").WorkReport> {
+  if (!native)
+    throw new Error(
+      "Abrir o Work minimizado e reconhecer as abas do Brave requer o Orbit no Windows e a extensão conectada.",
+    );
+  return invoke("launch_work");
 }

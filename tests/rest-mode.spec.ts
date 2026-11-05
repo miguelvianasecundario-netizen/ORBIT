@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("setas alternam descanso e principal e lembram o modo", async ({
   page,

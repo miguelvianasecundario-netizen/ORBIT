@@ -1,17 +1,15 @@
-# Continuar ORBIT 0.1.6
+# Continuar ORBIT 0.1.7
 
-Fonte baseada no ZIP 0.1.5 enviado pelo usuário. Preserve `app.orbit.launcher`, os modos, os quatro temas, as categorias e os dados locais existentes.
+Base: fonte 0.1.5 enviada pelo usuário + correções 0.1.6. Preserve `app.orbit.launcher`, o banco local, os três modos e os quatro temas.
 
-## Estado
+Work é o terceiro menu; só inclui `work-apps`, `work-browser`, `work-projects` e `orbit-work`. `work-all` é uma tela, não uma categoria de atalho. Um atalho Work individual usa `launch_work_item`, e o lote usa `launch_work`, ambos com exclusão mútua no backend.
 
-59 testes da interface, 23 do núcleo Rust, build TypeScript/Vite e Clippy do núcleo passaram. As correções e limites estão no README e em VALIDACAO.md. A nova fila de preferências aplica cada mudança sobre a última gravação confirmada; não voltar a enfileirar snapshots com alterações que falharam. Não recriar o formulário ao salvar o atalho global.
+A extensão Brave deve ser preparada no Orbit e carregada pelo usuário no navegador. O ID vem da chave pública no manifesto e precisa corresponder a `browser_identity.rs`. Não troque a chave sem atualizar ambos. O próprio executável é o host nativo; o ramo de mensagens roda antes de criar Tauri ou registrar atalhos globais.
 
-## Verificações restantes
+A lógica de abas e o protocolo foram testados separadamente. O Chromium gerenciado bloqueia instalar a extensão; não alterar a política para contornar isso. Conexão completa com Brave real, registro HKCU, extração de ícones e minimização/foco ainda precisam de validação em Windows. Consulte VALIDACAO.md.
 
-Executar os fluxos reais de pasta/.exe e hooks no Windows, monitores físicos com DPI misto e instalador NSIS. O teste da fronteira IPC no navegador não substitui esses fluxos. Respeitar a política de execução PowerShell vigente.
+Não substituir a fila de preferências por snapshots otimistas: uma falha de atalho global deve manter o registro anterior sem contaminar os próximos salvamentos. Não recriar o formulário ao salvar o atalho global.
 
-## Arquivos principais
+`src/item-icons.ts`: imagem assíncrona com fallback. `automatic_icons.rs`: favicon HTTPS/cache e ícone nativo. `work.rs`: validação, escopo, resultados e histórico. `work_windows.rs`: abertura minimizada, detecção de processo e acompanhamento limitado de janelas novas. `browser_bridge.rs` / `browser_host.rs`: token, framing e registro do host. `browser-extension/`: MV3 e fila de abas. `windows_paths.rs`: caminhos canônicos do Rust para APIs do shell, preservando UNC.
 
-`src/main.ts`: estado, fila de preferências, formulário e navegação. `src/style.css`: temas, base do círculo, limites de nomes e layout. `src-tauri/src/window_geometry.rs`: geometria compartilhada, testável também em Linux. `tests/regressions.spec.ts`: casos corrigidos. `tools/visual-preview.mjs`: composições e contraste sem depender de desfoque.
-
-Os ZIPs não contêm o banco pessoal. Ele continua em `%LOCALAPPDATA%\app.orbit.launcher\orbit.sqlite3`. Encerre o aplicativo antes de copiar esse banco; caminhos de arquivos precisam existir na máquina de destino.
+O ZIP não contém banco pessoal. Dados continuam em `%LOCALAPPDATA%\app.orbit.launcher\orbit.sqlite3`. Encerre o aplicativo antes de copiar esse banco.

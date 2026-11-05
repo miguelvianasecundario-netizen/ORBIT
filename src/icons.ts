@@ -1,4 +1,8 @@
 const paths: Record<string, string> = {
+  briefcase:
+    '<rect x="3" y="7" width="18" height="14" rx="3"/><path d="M8 7V4h8v3M3 12l9 3 9-3M10 13v4h4v-4"/>',
+  layers: '<path d="m12 2 10 5-10 5L2 7Zm-10 9 10 5 10-5M2 16l10 5 10-5"/>',
+
   moon: '<path d="M20.5 13A9 9 0 0 1 11 3.5 9 9 0 1 0 20.5 13Z"/>',
   book: '<path d="M12 5C8 2 4 3 2 4v15c4-2 7-1 10 1 3-2 6-3 10-1V4c-4-2-7-1-10 1Zm0 0v15"/>',
   play: '<rect x="2" y="4" width="20" height="15" rx="4"/><path d="m10 8 5 3.5-5 3.5Z"/>',

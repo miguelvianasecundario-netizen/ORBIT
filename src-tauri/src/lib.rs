@@ -1,4 +1,8 @@
 pub mod actions;
+pub mod automatic_icons;
+pub mod browser_bridge;
+pub mod browser_host;
+mod browser_identity;
 pub mod hotkey;
 pub mod models;
 #[cfg(windows)]
@@ -7,6 +11,10 @@ pub mod persistence;
 #[cfg(windows)]
 mod window;
 pub mod window_geometry;
+pub mod windows_paths;
+pub mod work;
+#[cfg(windows)]
+mod work_windows;
 #[cfg(windows)]
 mod desktop {
     use crate::{models::*, native::Listener, persistence::Database};
@@ -33,6 +41,80 @@ mod desktop {
         Manager, State,
     };
     struct NativeState(Mutex<Option<Listener>>);
+    struct WorkState(AtomicBool);
+    struct WorkGuard(tauri::AppHandle);
+    impl Drop for WorkGuard {
+        fn drop(&mut self) {
+            self.0
+                .state::<WorkState>()
+                .0
+                .store(false, Ordering::Release);
+        }
+    }
+    #[tauri::command]
+    fn browser_status(bridge: State<crate::browser_bridge::BrowserBridge>) -> serde_json::Value {
+        serde_json::json!({"connected": bridge.connected(), "prepared": bridge.prepared()})
+    }
+    #[tauri::command]
+    async fn prepare_browser(app: tauri::AppHandle) -> Result<String, String> {
+        tauri::async_runtime::spawn_blocking(move || {
+            let bridge = app.state::<crate::browser_bridge::BrowserBridge>();
+            let path = crate::browser_host::prepare(bridge.directory())?;
+            crate::work_windows::open_extension_folder(&path)?;
+            Ok(path.to_string_lossy().to_string())
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[tauri::command]
+    async fn get_item_icon(id: String, app: tauri::AppHandle) -> Result<Option<String>, String> {
+        tauri::async_runtime::spawn_blocking(move || {
+            let directory = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+            Ok(crate::automatic_icons::resolve(
+                &id,
+                &app.state::<Database>(),
+                &directory,
+            ))
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[tauri::command]
+    async fn launch_work(app: tauri::AppHandle) -> Result<crate::work::WorkReport, String> {
+        run_work_request(app, None).await
+    }
+    #[tauri::command]
+    async fn launch_work_item(
+        id: String,
+        app: tauri::AppHandle,
+    ) -> Result<crate::work::WorkReport, String> {
+        run_work_request(app, Some(id)).await
+    }
+    async fn run_work_request(
+        app: tauri::AppHandle,
+        id: Option<String>,
+    ) -> Result<crate::work::WorkReport, String> {
+        if app.state::<WorkState>().0.swap(true, Ordering::AcqRel) {
+            return Err("Seu Work já está sendo aberto.".into());
+        }
+        let guard = WorkGuard(app.clone());
+        tauri::async_runtime::spawn_blocking(move || {
+            let _guard = guard;
+            match id {
+                Some(id) => crate::work::launch_one(
+                    &app.state::<Database>(),
+                    &app.state::<crate::browser_bridge::BrowserBridge>(),
+                    &id,
+                ),
+                None => crate::work::launch_all(
+                    &app.state::<Database>(),
+                    &app.state::<crate::browser_bridge::BrowserBridge>(),
+                ),
+            }
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
     #[tauri::command]
     fn frontend_ready(app: tauri::AppHandle) -> Result<(), String> {
         crate::window::activate(&app)
@@ -83,6 +165,11 @@ mod desktop {
             .plugin(tauri_plugin_dialog::init())
             .invoke_handler(tauri::generate_handler![
                 get_state,
+                browser_status,
+                prepare_browser,
+                get_item_icon,
+                launch_work,
+                launch_work_item,
                 frontend_ready,
                 quit_orbit,
                 execute_action,
@@ -103,6 +190,14 @@ mod desktop {
                     .map_err(std::io::Error::other)?;
                 app.manage(db);
                 app.manage(NativeState(Mutex::new(Some(listener))));
+                let bridge = crate::browser_bridge::BrowserBridge::start(&directory)
+                    .map_err(std::io::Error::other)?;
+                // Updating a portable Orbit keeps the registered host pointing to this executable.
+                if bridge.prepared() {
+                    let _ = crate::browser_host::prepare(&directory);
+                }
+                app.manage(bridge);
+                app.manage(WorkState(AtomicBool::new(false)));
                 let open = MenuItem::with_id(app, "open", "Abrir Orbit", true, None::<&str>)?;
                 let quit = MenuItem::with_id(app, "quit", "Encerrar Orbit", true, None::<&str>)?;
                 let menu = Menu::with_items(app, &[&open, &quit])?;

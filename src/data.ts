@@ -2,7 +2,12 @@ import type { CategoryId, MenuItem, Mode, Theme } from "./types";
 export const modeNames: Record<Mode, string> = {
   main: "Principal",
   rest: "Descanso",
+  work: "Work",
 };
+export const modes: Mode[] = ["main", "rest", "work"];
+export function adjacentMode(mode: Mode, direction: number): Mode {
+  return modes[(modes.indexOf(mode) + direction + modes.length) % modes.length];
+}
 export const themes: { id: Theme; title: string; colors: string[] }[] = [
   { id: "ocean", title: "Oceano", colors: ["#152c36", "#9bf3d0", "#f3fbff"] },
   {
@@ -65,6 +70,27 @@ export const categories: {
     title: "Streaming",
     icon: "play",
     subtitle: "Escolha o que assistir",
+  },
+  {
+    id: "work-apps",
+    mode: "work",
+    title: "Aplicativos",
+    icon: "grid",
+    subtitle: "Aplicativos de trabalho",
+  },
+  {
+    id: "work-browser",
+    mode: "work",
+    title: "Navegador",
+    icon: "globe",
+    subtitle: "Sites do seu Work",
+  },
+  {
+    id: "work-projects",
+    mode: "work",
+    title: "Projetos",
+    icon: "folder",
+    subtitle: "Pastas de trabalho",
   },
 ];
 export const items: MenuItem[] = [

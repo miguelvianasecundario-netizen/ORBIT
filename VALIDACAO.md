@@ -1,34 +1,40 @@
-# Validação — ORBIT 0.1.6
+# Validação — ORBIT 0.1.7
 
-Base recebida: `orbit-codigo-fonte-v0.1.5.zip`. Ambiente desta rodada: Linux, Node 24, Chromium e Rust. O relatório anterior recebido está em [docs/validation-v0.1.5-received.md](docs/validation-v0.1.5-received.md); seus testes Windows não foram repetidos aqui.
+Ambiente: Linux, Node 24, Chromium 155 e Rust, com compilação cruzada para Windows x64 GNU. Base: fonte 0.1.5 enviada pelo usuário e correções 0.1.6. [Relatório 0.1.6](docs/validation-v0.1.6.md).
 
-## Resultado
+## Resultados
 
-- **59 testes Playwright passaram.** Os 50 existentes passaram antes das alterações. Sete novos casos falharam na fonte recebida e passaram após as correções; mais dois cobrem o botão de Streaming e o limite Unicode.
-- **23 testes Rust passaram**, incluindo os sete de geometria que antes eram compilados apenas no Windows. Nenhuma preferência ou tabela foi migrada de forma destrutiva.
-- **TypeScript/Vite e Clippy do núcleo aprovados**, com `-D warnings`.
-- **Executável Windows x64 compilado em release** com alvo GNU, `custom-protocol` e a interface final incorporada. `orbit.exe` e `WebView2Loader.dll` são PE x86-64. O binário 0.1.6 não foi executado neste ambiente Linux.
-- Após o acabamento final do círculo e cores, **21 testes afetados foram repetidos e passaram**; o restante da suíte não sofreu alterações funcionais.
-- Layouts: 720×440, 620×380, 540×340, 380×264 e 320×480; escalas de rasterização 100%, 125%, 150% e 200%. Isso não emula monitores físicos com DPI misto.
-- Quatro temas conferidos em composições sobre fundos claros, escuros e com texto, **com desfoque CSS desligado**. Texto principal/secundário sobre as superfícies testadas: contraste mínimo 4,95:1; ícones da lista do navegador: mínimo 4,71:1. Método: cores CSS computadas, composição alfa sobre preto/branco, luminância sRGB WCAG. Não é uma auditoria completa de acessibilidade nem uma medida dos pixels do Windows.
+- **72 testes Playwright**: três modos, cadastro por categoria/bola, preservação de preferências, nomes, foco, repetição de cliques, Work vazio, resultado de lote, atalho Work individual e carregamento/fallback de ícones.
+- **32 testes Rust**: validação e persistência, escopo do Work, arquivo removido, histórico apenas de novas aberturas, autenticação, rejeição de segundo perfil, framing limitado, IDs de resposta incorretos, caminhos UNC e ícones declarados em HTML.
+- **5 testes Node da extensão**: URLs abertas e pendentes, duplicação no lote, janela minimizada quando não há janela normal, falhas por item, URLs inválidas e serialização de pedidos simultâneos com heartbeat. A API do Chrome é simulada nesses testes.
+- **Host Rust real aprovado** em `tools/check-native-host.mjs`: processo Linux, stdin/stdout binários, conexão TCP em localhost, token, encaminhamento nos dois sentidos e encerramento ao fechar a entrada. O lado Orbit da conexão é um cliente de teste; não envolve Brave nem registro Windows.
+- **TypeScript/Vite aprovados. Clippy sem avisos**, com `-D warnings`, no núcleo Linux e no alvo Windows.
+- **Release Windows x64** compilado com `custom-protocol`, interface incorporada e `WebView2Loader.dll`. Verificação de ZIP, SHA-256, versões e arquivos incorporados acompanha o empacotamento. O executável não foi executado no Windows nesta rodada.
 
-## Regressões cobertas
+Na última execução completa da interface, 71 casos passaram e o teste de lote avançou antes de terminar seu cadastro assíncrono. O teste passou a aguardar a confirmação visível de salvamento; os 13 casos Work foram então reexecutados e passaram. Os 72 casos acima descrevem a cobertura final dessas execuções.
 
-1. Dois envios consecutivos não duplicam o atalho.
-2. Troca de categoria/bola e cancelamento do seletor preservam o .exe escolhido.
-3. Falha ao registrar F8 não impede salvar o tema seguinte, não perde o formulário e mantém o atalho anterior.
-4. Foco entra na lista compacta e retorna ao fechar configurações.
-5. Nomes longos cabem no setor em janela normal e baixa, com nome completo acessível.
-6. Salvar o atalho de teclado preserva o nome e URL em edição.
-7. O + de Streaming permanece visível e abre o formulário correto.
-8. Interface e backend aceitam até 80 caracteres Unicode; a interface rejeita 81.
+## Interface e correções
 
-Os testes de seletor e de conflito de atalho em `tests/regressions.spec.ts` simulam **somente a fronteira IPC**. Não abrem diálogos do sistema nem registram teclas no Windows. Os testes Rust validam dados e substituição transacional do registro, usando implementações de teste.
+Layouts anteriores: 720×440, 620×380, 540×340, 380×264 e 320×480, com fatores de rasterização 100%, 125%, 150% e 200%. Work também foi verificado em 720×440, 380×264 e 320×480. Isso não emula monitores físicos com DPI misto.
 
-## Pendente no Windows
+A suíte encontrou transbordamento transitório da lista em uma janela estreita e alta, causado pela rotação da animação. No layout compacto, a lista agora usa um deslocamento vertical curto; a bola mantém seu balanço de 200 ms. Movimento reduzido continua respeitado.
 
-- Selecionar, cancelar, salvar e abrir pasta/.exe pelo seletor real; testar jogos portáteis e diretório de trabalho.
-- Conferir composição transparente, ativação global, foco externo e múltiplos monitores com DPI misto.
-- Gerar e testar instalação/desinstalação NSIS em ambiente limpo.
+O botão de adicionar da categoria recebeu um rótulo distinto do botão que confirma o formulário. Ícones têm espaço fixo e imagem carregada antes de ocultar o símbolo de reserva; nenhum texto passa a depender da presença do favicon.
 
-Os auxiliares `tools/check-native.mjs` e `tools/check-rest-native.mjs` são para Windows e não foram executados nesta rodada. O primeiro agora espera 720×440 DIP e respeita a política de execução PowerShell vigente.
+As composições dos quatro temas foram conferidas sobre fundos claros/escuros com texto, sem desfoque CSS. Contraste calculado: texto mínimo **4,95:1**, símbolos da lista do Navegador mínimo **4,71:1**. Método: cores CSS computadas, composição alfa sobre preto/branco e luminância sRGB WCAG. Não é uma auditoria completa nem uma medição dos pixels do Windows; não mede as cores internas de logos remotos.
+
+Os testes em `tests/helpers/native-boundary.ts` simulam **somente o IPC**. Eles não registram teclas no Windows, não abrem seletores reais, não extraem ícones de `.exe` e não iniciam programas. Favicons externos são substituídos por fixtures quando interceptáveis; ícones nativos são verificados com imagem incorporada, sem depender de um site real.
+
+## Limites e verificações pendentes
+
+O teste completo `tools/check-brave-extension.mjs` tentou carregar a extensão real no Chromium com perfil temporário. A política gerenciada `ExtensionInstallBlocklist: ["*"]` bloqueou a instalação; ela não foi alterada. Portanto, **a extensão não foi validada conectada ao Brave real** nesta entrega. O ID calculado da chave pública do manifesto e a origem esperada pelo host foram conferidos.
+
+Ainda precisam de validação no Windows:
+
+- Preparar a extensão, conferir a chave HKCU, carregar/recarregar no Brave e obter **Brave conectado**.
+- Abrir duas vezes o mesmo Work, verificar abas existentes/pendentes e confirmar que a aba ativa não muda; repetir com Brave fechado e com perfis diferentes.
+- Confirmar minimização e foco com aplicativos reais, iniciadores, aplicativos já abertos e Explorador. Programas podem ignorar o estado solicitado, abrir processos filhos diferentes ou pedir elevação; o Orbit não garante minimizar todos eles.
+- Verificar ícones reais de executáveis/pastas e downloads HTTPS de ícones pelo WinHTTP.
+- Seletores nativos, hooks globais, transparência sobre o desktop, monitores físicos com DPI misto e instalação/desinstalação NSIS.
+
+Os scripts Windows anteriores em `tools/check-native.mjs` e `tools/check-rest-native.mjs` não foram executados nesta rodada. O teste completo da extensão em Chromium Linux também não substitui os fluxos Windows acima.

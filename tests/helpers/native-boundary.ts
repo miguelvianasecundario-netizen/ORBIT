@@ -1,8 +1,11 @@
 import type { Page } from "@playwright/test";
 
 /** Only the IPC boundary is simulated. This does not validate Win32 or dialogs. */
-export async function nativeBoundary(page: Page) {
-  await page.addInitScript(() => {
+export async function nativeBoundary(
+  page: Page,
+  iconValue: string | null = null,
+) {
+  await page.addInitScript((iconValue) => {
     const w = window as any;
     w.isTauri = true;
     w.orbitProbe = {
@@ -26,6 +29,34 @@ export async function nativeBoundary(page: Page) {
       invoke: async (cmd: string, args: any = {}) => {
         const p = w.orbitProbe;
         p.calls.push({ cmd, args: structuredClone(args) });
+        if (cmd === "get_item_icon") return iconValue;
+        if (cmd === "browser_status")
+          return { connected: true, prepared: true };
+        if (cmd === "prepare_browser") return "C:\\Orbit\\browser-extension";
+        if (cmd === "launch_work" || cmd === "launch_work_item") {
+          if (p.delay)
+            await new Promise((resolve) => setTimeout(resolve, p.delay));
+          return {
+            results: p.state.shortcuts
+              .filter(
+                (item: any) =>
+                  [
+                    "work-apps",
+                    "work-browser",
+                    "work-projects",
+                    "orbit-work",
+                  ].includes(item.category) &&
+                  (!args.id || item.id === args.id),
+              )
+              .map((item: any) => ({
+                id: item.id,
+                title: item.title,
+                status: item.title.includes("aberto")
+                  ? "alreadyOpen"
+                  : "opened",
+              })),
+          };
+        }
         if (cmd === "get_state") return structuredClone(p.state);
         if (cmd === "save_settings") {
           if (p.delay)
@@ -55,5 +86,5 @@ export async function nativeBoundary(page: Page) {
         throw new Error(`Unexpected IPC command: ${cmd}`);
       },
     };
-  });
+  }, iconValue);
 }

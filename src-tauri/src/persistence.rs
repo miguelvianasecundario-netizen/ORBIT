@@ -256,20 +256,14 @@ impl Database {
                 | "streaming"
                 | "orbit-main"
                 | "orbit-rest"
+                | "work-apps"
+                | "work-browser"
+                | "work-projects"
+                | "orbit-work"
         ) {
             return Err("Categoria inválida.".into());
         }
         let action = validate_action(action)?;
-        if matches!(action, Action::Executable { .. })
-            && !matches!(
-                category.as_str(),
-                "apps" | "games" | "orbit-main" | "orbit-rest"
-            )
-        {
-            return Err(
-                "Adicione executáveis em Aplicativos, Jogos ou diretamente na bola.".into(),
-            );
-        }
         let icon = match &action {
             Action::Url { .. } => "globe",
             Action::Folder { .. } => "folder",
@@ -523,7 +517,7 @@ mod tests {
     }
 
     #[test]
-    fn executable_shortcuts_are_limited_to_apps_and_revalidated_after_removal() {
+    fn executable_shortcuts_work_in_every_category_and_are_revalidated_after_removal() {
         let directory = std::env::temp_dir().join(format!("orbit-app-shortcut-{}", Uuid::new_v4()));
         std::fs::create_dir(&directory).unwrap();
         let executable = directory.join("Program.exe");
@@ -532,10 +526,20 @@ mod tests {
             value: executable.to_string_lossy().into(),
         };
         let db = memory_db();
-        for category in ["browser", "projects", "actions"] {
+        for category in [
+            "browser",
+            "projects",
+            "actions",
+            "orbit-main",
+            "orbit-rest",
+            "work-apps",
+            "work-browser",
+            "work-projects",
+            "orbit-work",
+        ] {
             assert!(db
                 .add_shortcut("Program".into(), category.into(), action.clone())
-                .is_err());
+                .is_ok());
         }
         let shortcut = db
             .add_shortcut("Program".into(), "apps".into(), action)
@@ -544,7 +548,7 @@ mod tests {
             db.find_shortcut(&shortcut.id).unwrap(),
             Some(shortcut.clone())
         );
-        assert_eq!(db.snapshot().unwrap().shortcuts.len(), 1);
+        assert_eq!(db.snapshot().unwrap().shortcuts.len(), 10);
         std::fs::remove_file(&executable).unwrap();
         assert!(validate_action(shortcut.action).is_err());
         assert!(crate::actions::execute(&shortcut.id, &db).is_err());

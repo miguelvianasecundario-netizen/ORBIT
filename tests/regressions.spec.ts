@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import { nativeBoundary } from "./helpers/native-boundary";
 
 test("envios consecutivos cadastram o atalho uma vez", async ({ page }) => {
@@ -167,8 +167,10 @@ for (const size of [
     await expect(button).toBeVisible();
     const fit = await button.evaluate((el) => {
       const b = el.getBoundingClientRect();
-      const s = el.querySelector("span")!.getBoundingClientRect();
-      const i = el.querySelector("svg")!.getBoundingClientRect();
+      const s = el.querySelector("span:last-child")!.getBoundingClientRect();
+      const i = el
+        .querySelector(".automatic-icon, svg")!
+        .getBoundingClientRect();
       return (
         s.left >= b.left &&
         s.right <= b.right &&

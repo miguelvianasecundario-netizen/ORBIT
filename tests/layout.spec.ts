@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "./fixtures";
 
 const categories = ["Aplicativos", "Navegador", "Projetos", "Ações"];
 
@@ -15,7 +15,7 @@ async function fullBoxInViewport(locator: Locator, page: Page) {
 
 async function assertLegibleLabel(locator: Locator) {
   const metrics = await locator.evaluate((el) => {
-    const label = el.querySelector("span:not(.app-icon), strong")!;
+    const label = el.querySelector(".category > span:last-child, strong")!;
     const style = getComputedStyle(label);
     const text = document.createRange();
     text.selectNodeContents(label);

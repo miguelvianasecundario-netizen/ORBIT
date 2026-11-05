@@ -21,12 +21,20 @@ import {
   chooseFolder,
   chooseExecutable,
   allItems,
+  browserStatus,
+  prepareBrowser,
+  launchWork,
 } from "./bridge";
 import { icon } from "./icons";
 import { radial, wheelOptions } from "./radial";
-import { categories } from "./data";
+import { categories, adjacentMode } from "./data";
+import { workView, workItems } from "./work-view";
+import { itemIcon, hydrateIcons } from "./item-icons";
 import type {
   CategoryId,
+  ViewId,
+  WorkReport,
+  BrowserStatus,
   MenuItem,
   OrbitState,
   Settings,
@@ -51,7 +59,11 @@ let preferenceRevision = 0;
 let confirmedSettings = { ...state.settings };
 let pendingSettings: { patch: Partial<Settings> }[] = [];
 const defaultCategory = (): CategoryId =>
-  state.settings.mode === "main" ? "browser" : "streaming";
+  state.settings.mode === "main"
+    ? "browser"
+    : state.settings.mode === "rest"
+      ? "streaming"
+      : "work-browser";
 function applyTheme() {
   document.documentElement.dataset.theme = state.settings.theme;
 }
@@ -90,13 +102,16 @@ function updateSettings(patch: Partial<Settings>): Promise<void> {
   settingsQueue = work.catch(() => {});
   return work;
 }
-let selected: CategoryId | null = compactLayout() ? null : "browser",
+let selected: ViewId | null = compactLayout() ? null : "browser",
   opened = true,
   panel = false,
   branchSide = "right",
   query = "",
   busy = false;
 let trail: MenuItem[] = [];
+let workBusy = false;
+let workReport: WorkReport | null = null;
+let brave: BrowserStatus | null = null;
 let addingShortcut = false;
 let pickingDestination = false;
 let panelOpener = "#settings";
@@ -176,7 +191,7 @@ function show() {
   render();
 }
 function actionButton(item: MenuItem, i: number) {
-  return `<button class="bubble" style="--i:${i}" data-item="${esc(item.id)}" aria-label="${esc(item.title)}"><span class="app-icon ${esc(item.icon)}">${icon(item.icon)}</span><span class="bubble-copy"><strong>${esc(item.title)}</strong><small>${esc(item.description ?? (item.action?.type === "folder" ? "Pasta favorita" : "Seu atalho"))}</small></span>${icon(item.children ? "chevron" : "arrow", "bubble-arrow")}</button>`;
+  return `<button class="bubble" style="--i:${i}" data-item="${esc(item.id)}" aria-label="${esc(item.title)}"><span class="app-icon ${esc(item.icon)}">${itemIcon(item)}</span><span class="bubble-copy"><strong>${esc(item.title)}</strong><small>${esc(item.description ?? (item.action?.type === "folder" ? "Pasta favorita" : "Seu atalho"))}</small></span>${icon(item.children ? "chevron" : "arrow", "bubble-arrow")}</button>`;
 }
 function render(animate = false) {
   applyTheme();
@@ -185,6 +200,17 @@ function render(animate = false) {
   document.body.classList.toggle("native", native);
   document.documentElement.classList.toggle("desktop", native);
   const available = allItems(state);
+  const addingLabels: Partial<Record<ViewId, string>> = {
+    apps: "Adicionar aplicativo",
+    games: "Adicionar jogo",
+    projects: "Adicionar projeto",
+    streaming: "Adicionar streaming",
+    "work-apps": "Adicionar aplicativo",
+    "work-projects": "Adicionar projeto",
+  };
+  const addLabel = selected
+    ? (addingLabels[selected] ?? "Adicionar atalho nesta categoria")
+    : "Adicionar atalho nesta categoria";
   const listing = query
     ? sorted(
         available.filter((i) =>
@@ -202,16 +228,18 @@ function render(animate = false) {
         ? `<main class="workspace" aria-label="Launcher Orbit"><div class="launcher ${selected ? "has-selection" : ""} ${branchSide === "left" ? "branch-left" : ""}" data-launcher>
       <div class="radial-column">${radial(selected, state, wheelPage)}<div class="compact-controls"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button><button class="icon-button" id="add-to-wheel" aria-label="Adicionar à bola" title="Adicionar à bola">${icon("plus")}</button>${pageCount > 1 ? `<div class="page-controls"><button class="icon-button" id="previous-page" aria-label="Página anterior de opções">${icon("chevronLeft")}</button><span>${wheelPage + 1}/${pageCount}</span><button class="icon-button" id="next-page" aria-label="Próxima página de opções">${icon("chevron")}</button></div>` : ""}<button class="icon-button dismiss" id="close" aria-label="Fechar launcher" title="Fechar (Esc)">${icon("close")}</button></div></div>
       <section class="branch ${!selected && !query ? "collapsed" : ""}" aria-label="Opções da categoria">
-        <header class="branch-heading"><button class="icon-button back-list" id="back-list" aria-label="Voltar às categorias">${icon("back")}</button><h1>${esc(trail.at(-1)?.title ?? categories.find((c) => c.id === selected)?.title ?? "Escolha uma categoria")}</h1><span class="count" aria-label="${listing.length} opções">${listing.length}</span>${selected === "streaming" ? `<button class="icon-button branch-add" id="add-app" aria-label="Adicionar streaming" title="Adicionar streaming">${icon("plus")}</button>` : ""}<button class="icon-button branch-settings" id="branch-settings" aria-label="Configurações">${icon("settings")}</button></header>
+        <header class="branch-heading"><button class="icon-button back-list" id="back-list" aria-label="Voltar às categorias">${icon("back")}</button><h1>${esc(selected === "work-all" ? "Work" : (trail.at(-1)?.title ?? categories.find((c) => c.id === selected)?.title ?? "Escolha uma categoria"))}</h1><span class="count" aria-label="${selected === "work-all" ? workItems(state).length : listing.length} opções">${selected === "work-all" ? workItems(state).length : listing.length}</span>${selected && selected !== "work-all" ? `<button class="icon-button branch-add" id="add-category-shortcut" aria-label="${addLabel}" title="${addLabel}">${icon("plus")}</button>` : ""}<button class="icon-button branch-settings" id="branch-settings" aria-label="Configurações">${icon("settings")}</button></header>
         <svg class="connectors" viewBox="0 0 100 360" preserveAspectRatio="none" aria-hidden="true">${[45, 135, 225, 315].map((y) => `<path d="M0 180 C60 180 35 ${y} 100 ${y}"/>`).join("")}<circle cx="4" cy="180" r="4"/></svg>
-        <div class="branch-list">${listing.map(actionButton).join("")}${listing.length === 0 ? `<p class="empty-list">${selected === "games" ? "Adicione o executável do seu jogo para abrir por aqui." : "Guarde aqui as pastas dos seus projetos."}</p>` : ""}${selected === "projects" && !query ? `<button class="bubble add-project" id="add-project" aria-label="Adicionar projeto"><span class="app-icon">${icon("plus")}</span><span class="bubble-copy"><strong>Adicionar projeto</strong></span></button>` : ""}${["apps", "games"].includes(selected ?? "") && !query ? `<button class="bubble add-project" id="add-app" aria-label="${selected === "games" ? "Adicionar jogo" : selected === "streaming" ? "Adicionar streaming" : "Adicionar aplicativo"}"><span class="app-icon">${icon("plus")}</span><span class="bubble-copy"><strong>${selected === "games" ? "Adicionar jogo" : selected === "streaming" ? "Adicionar streaming" : "Adicionar aplicativo"}</strong></span></button>` : ""}</div>
+        <div class="branch-list">${selected === "work-all" ? workView(state, workReport, workBusy, brave) : listing.map(actionButton).join("") + (listing.length === 0 ? `<p class="empty-list">Adicione seus atalhos pelo + no cabeçalho.</p>` : "")}</div>
       </section>
     </div></main>`
         : `<div class="resting"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button><button class="primary" id="reopen">Abrir Orbit ${icon("arrow")}</button><p><kbd>${esc(hotkeyLabel(state.settings.hotkey))}</kbd></p></div>`
     }
-    ${panel ? settingsView(state, selected) : ""}
+    ${panel ? settingsView(state, selected === "work-all" ? null : selected) : ""}
   </div>`;
   bind();
+  hydrateIcons(app, available);
+  void refreshBrowserStatus();
   if (animate) {
     app.querySelector(".wheel")?.classList.add("menu-swing");
     app.querySelector(".branch")?.classList.add("menu-swing");
@@ -221,7 +249,10 @@ function render(animate = false) {
 function bind() {
   for (const button of app.querySelectorAll<HTMLElement>("[data-mode-switch]"))
     button.onclick = () => {
-      const mode: Mode = state.settings.mode === "main" ? "rest" : "main";
+      const mode: Mode = adjacentMode(
+        state.settings.mode,
+        button.dataset.modeSwitch === "previous" ? -1 : 1,
+      );
       void updateSettings({ mode }).catch((e) => {
         selected = compactLayout() ? null : defaultCategory();
         wheelPage = 0;
@@ -230,6 +261,7 @@ function bind() {
       });
       wheelPage = 0;
       selected = compactLayout() ? null : defaultCategory();
+      workReport = null;
       query = "";
       trail = [];
       render(true);
@@ -280,6 +312,35 @@ function bind() {
   app
     .querySelector("[data-add]")
     ?.addEventListener("click", () => openForm(`orbit-${state.settings.mode}`));
+  app
+    .querySelector("#add-work-shortcut")
+    ?.addEventListener("click", () => openForm("orbit-work"));
+  app.querySelector("#add-category-shortcut")?.addEventListener("click", () => {
+    if (!selected || selected === "work-all") return;
+    const kind = ["apps", "games", "work-apps"].includes(selected)
+      ? "executable"
+      : ["projects", "work-projects"].includes(selected)
+        ? "folder"
+        : "url";
+    openForm(selected, kind);
+  });
+  for (const button of app.querySelectorAll("[data-batch], #run-work"))
+    button.addEventListener("click", () => void runWork());
+  app.querySelector("#prepare-browser")?.addEventListener("click", async () => {
+    const button = app.querySelector<HTMLButtonElement>("#prepare-browser")!;
+    const result = app.querySelector<HTMLElement>("#browser-setup-result")!;
+    button.disabled = true;
+    try {
+      const path = await prepareBrowser();
+      result.hidden = false;
+      result.textContent = `No Brave, abra brave://extensions, ative Modo de desenvolvedor e use Carregar sem compactação. Selecione a pasta: ${path}. A conexão aparecerá aqui quando estiver pronta.`;
+      await refreshBrowserStatus();
+    } catch (e) {
+      notify(String(e), true);
+    } finally {
+      button.disabled = false;
+    }
+  });
   app
     .querySelector('[data-suggestion="books"]')
     ?.addEventListener("click", () =>
@@ -342,8 +403,7 @@ function bind() {
       if (compactLayout())
         focusVisible(
           ".branch-list [data-item]",
-          "#add-project",
-          "#add-app",
+          "#add-category-shortcut",
           "#back-list",
         );
       else focusVisible(`[data-category="${selected}"]`);
@@ -359,29 +419,12 @@ function bind() {
   app.querySelector("#back-list")?.addEventListener("click", back);
   for (const el of app.querySelectorAll<HTMLElement>("[data-item]"))
     el.onclick = () => void runItem(el.dataset.item!);
-  for (const id of [
-    "settings",
-    "branch-settings",
-    "add",
-    "customize",
-    "add-project",
-    "add-app",
-  ])
+  for (const id of ["settings", "branch-settings"])
     app.querySelector("#" + id)?.addEventListener("click", () => {
       rememberPanelOpener();
       panel = true;
       render();
       app.querySelector<HTMLButtonElement>("#close-settings")?.focus();
-      if (id === "add-project" || id === "add-app") {
-        openForm(
-          selected!,
-          id === "add-project"
-            ? "folder"
-            : selected === "streaming"
-              ? "url"
-              : "executable",
-        );
-      }
     });
   app.querySelector("#close-settings")?.addEventListener("click", closePanel);
   app.querySelector(".panel-backdrop")?.addEventListener("click", (e) => {
@@ -433,18 +476,6 @@ function bind() {
           ? "Selecionar executável (.exe)"
           : "Selecionar pasta");
       app.querySelector<HTMLInputElement>("#shortcut-url")!.required = !local;
-      const category =
-        app.querySelector<HTMLSelectElement>("#shortcut-category")!;
-      if (
-        kind === "executable" &&
-        !["apps", "games", "orbit-main", "orbit-rest"].includes(category.value)
-      )
-        category.value =
-          app.querySelector<HTMLSelectElement>("#shortcut-mode")!.value ===
-          "rest"
-            ? "games"
-            : "apps";
-      category.disabled = false;
     });
   app.querySelector("#pick-folder")?.addEventListener("click", async () => {
     if (pickingDestination) return;
@@ -553,6 +584,51 @@ function bind() {
       notify(String(e), true);
     }
   });
+}
+async function refreshBrowserStatus() {
+  if (!panel && state.settings.mode !== "work") return;
+  try {
+    brave = await browserStatus();
+  } catch {
+    brave = { connected: false, prepared: false };
+  }
+  const label = brave.connected
+    ? "Brave conectado · as abas existentes serão preservadas."
+    : brave.prepared
+      ? "Extensão preparada. Carregue-a no Brave e use Reconectar, se necessário."
+      : "Extensão ainda não conectada.";
+  for (const node of app.querySelectorAll(
+    "#browser-connection, #work-browser-connection",
+  ))
+    node.textContent = label;
+}
+setInterval(() => {
+  if (opened && (panel || state.settings.mode === "work"))
+    void refreshBrowserStatus();
+}, 3000);
+async function runWork() {
+  if (workBusy) return;
+  selected = "work-all";
+  workReport = null;
+  if (!workItems(state).length) {
+    render();
+    return;
+  }
+  workBusy = true;
+  render();
+  try {
+    const report = await launchWork();
+    workReport = report;
+    await refresh();
+  } catch (e) {
+    notify(String(e), true);
+  } finally {
+    workBusy = false;
+    if (opened && !panel && state.settings.mode === "work") {
+      render();
+      focusVisible("#run-work");
+    }
+  }
 }
 async function runItem(id: string) {
   if (busy) return;

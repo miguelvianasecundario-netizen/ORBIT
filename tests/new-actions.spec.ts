@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 test("Brave substitui Google e informa requisito desktop na prévia", async ({
   page,
 }) => {

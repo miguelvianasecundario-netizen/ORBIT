@@ -1,77 +1,83 @@
-# ORBIT 0.1.6 — correções e leitura mais clara
+# ORBIT 0.1.7 — Work, atalhos e ícones automáticos
 
-Base: código-fonte **0.1.5 enviado pelo usuário**, com os modos Principal/Descanso, quatro temas e todos os atalhos existentes preservados.
+Um terceiro menu para reunir seu trabalho: aplicativos, sites e pastas, com **Abrir tudo**. Os modos Principal e Descanso, quatro temas, atalhos e preferências das versões anteriores continuam disponíveis.
 
-[Baixar para Windows x64](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-windows-x64-v0.1.6.zip) · [Baixar o código-fonte](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-codigo-fonte-v0.1.6.zip)
+[**Baixar para Windows x64**](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-windows-x64-v0.1.7.zip) · [**Baixar o código-fonte**](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-codigo-fonte-v0.1.7.zip)
 
-## Correções desta versão
+## Abrir e atualizar
 
-- Enviar o formulário repetidamente durante o salvamento cria apenas um atalho.
-- Trocar a categoria ou a bola preserva a pasta/.exe selecionado. Cancelar o seletor mantém a seleção anterior; trocar o tipo limpa um destino incompatível.
-- Uma falha na troca de atalho global mantém o atalho anterior e não contamina as alterações de tema ou ativação que estão na fila.
-- Salvar o atalho de teclado mantém o nome e a URL que estão sendo preenchidos. O foco retorna aos controles ao fechar as configurações e acompanha a lista no layout compacto.
-- Nomes longos ficam limitados a duas linhas na bola, com nome completo no tooltip e no rótulo acessível. O limite de 80 caracteres Unicode é igual na interface e no Rust.
-- O círculo ganhou uma base translúcida para reduzir o texto da janela atrás dos setores e do centro. Paginação, ícones do tema Papel e o texto secundário do Oceano ganharam contraste. O + de Streaming fica no cabeçalho.
+1. Encerre a versão anterior pela bandeja → **Encerrar Orbit**.
+2. Extraia **todos os arquivos** do ZIP em uma pasta nova.
+3. Abra `orbit.exe`, com `WebView2Loader.dll` ao lado dele.
 
-## Abrir
+Requer Windows 11 x64 e Microsoft Edge WebView2 Runtime. Alt + clique central é a ativação padrão; seu atalho salvo continua funcionando. A engrenagem permite escolher o atalho de teclado. Esc ou clique externo oculta o launcher.
 
-Encerre a versão anterior pela bandeja, extraia **todos os arquivos** do ZIP em uma pasta nova e abra `orbit.exe`, mantendo `WebView2Loader.dll` ao lado dele. Windows 11 x64 com Microsoft Edge WebView2. Alt + clique central é o padrão; seu atalho salvo continua funcionando. Esc ou clique externo oculta o launcher.
+## Seus três menus
 
-## Principal e Descanso
+As setas laterais alternam **Principal → Descanso → Work**. A seta anterior faz o caminho inverso. O último modo fica salvo.
 
-Use as pequenas setas encostadas nas laterais da bola. O centro informa qual modo está ativo. A troca faz um balanço de **0,2 s**, desativado quando o Windows pede movimento reduzido. O último modo fica salvo.
+- **Principal:** Aplicativos, Navegador, Projetos e Ações.
+- **Descanso:** Jogos, Streaming e suas opções. Os seis serviços de streaming anteriores foram preservados.
+- **Work:** Aplicativos, Navegador, Projetos e **Abrir tudo**. Começa vazio para você escolher o que deseja iniciar junto.
 
-- **Principal:** Aplicativos, Navegador, Projetos e Ações. Navegador mantém Nova guia do Brave (`brave://newtab/`).
-- **Descanso:** Jogos, Streaming e espaço para opções suas.
-- **Streaming:** Prime Video, Disney+, Netflix, HBO Max, Apple TV e Globoplay. Abre os sites oficiais no navegador padrão; não inclui assinatura dos serviços.
-- **Jogos:** clique em Jogos > Adicionar jogo > Selecionar executável (.exe), escolha o arquivo e salve.
-- **Livros:** clique na sugestão Livros, selecione sua pasta e salve. O novo botão abre a pasta diretamente no Explorador.
-- **Mais opções na bola:** clique no + abaixo da bola ou em Adicionar; em Categoria escolha Direto na bola. Pode ser pasta, link HTTPS ou executável. Escolha Principal ou Descanso no campo Bola.
-- **Mais de quatro opções:** use as setas de página ao lado do indicador abaixo da bola. As setas laterais grandes continuam trocando entre Principal e Descanso.
-- **Remover:** engrenagem > lista de atalhos > lixeira. Remove somente o atalho do ORBIT.
+O **+ abaixo da bola** adiciona uma opção diretamente nela. O **+ no cabeçalho da categoria** adiciona àquela lista. No formulário, escolha a bola, a categoria e o tipo: site HTTPS, pasta ou executável `.exe`. Qualquer categoria aceita os três tipos. Mais de quatro opções na bola aparecem em páginas; as setas abaixo da bola mudam a página.
 
-## Temas e enquadramento
+O ícone do site é buscado automaticamente no próprio site; o de um executável ou pasta é extraído pelo Windows. A imagem aparece quando termina de carregar, com um símbolo de reserva se estiver indisponível. O cache local dura 24 horas. Não é necessário escolher uma imagem manualmente.
 
-Engrenagem > Aparência: **Oceano, Ametista, Grafite e Papel**. A escolha é aplicada imediatamente, mantém o rascunho do formulário e fica salva.
+Para remover, use a lixeira na lista de atalhos das configurações. Isso remove apenas o atalho do Orbit.
 
-Janela padrão de **720×440 unidades lógicas**. Bola de 304 px, área para as setas e lista separada. Os seis streamings cabem por inteiro no tamanho padrão. Abaixo de 620 px de largura ou 380 px de altura, bola e lista usam a mesma área em etapas. Abaixo de 320 px de altura, os setores viram uma grade para preservar a leitura. Controles de pelo menos 44 px; listas longas têm rolagem interna. A janela respeita a área útil do monitor e a escala do Windows.
+## Abrir o Work
 
-## Dados e execução
+**Abrir tudo** inicia somente os atalhos cadastrados no Work, inclusive os que estão diretamente na bola. Mostra um resultado por item: **Aberto**, **Já estava aberto** ou **Não abriu**, com o motivo da falha. Cliques repetidos durante a operação não iniciam outro lote.
 
-Atalhos, histórico e preferências ficam em `%LOCALAPPDATA%\app.orbit.launcher\orbit.sqlite3`. A identidade do aplicativo e o formato dos atalhos existentes foram mantidos. Preferências antigas recebem tema Oceano e modo Principal automaticamente.
+- **Sites:** a extensão verifica as abas abertas e as navegações pendentes no perfil conectado do Brave. Só cria URLs ausentes, em segundo plano, sem selecionar abas existentes. URLs iguais dentro do próprio lote também não se repetem. Caminho, parâmetros e fragmento fazem parte da comparação: duas páginas diferentes do mesmo site continuam sendo dois atalhos.
+- **Aplicativos:** solicita abertura minimizada, sem ativar a janela. Se o mesmo executável já estiver rodando, mantém a instância existente. Acompanha por quatro segundos as novas janelas dos executáveis solicitados para minimizar aquelas que ignorarem a instrução inicial.
+- **Pastas:** solicita abertura minimizada ao Explorador. Pastas repetidas no mesmo lote são solicitadas apenas uma vez.
 
-Arquivos .exe precisam existir e ter caminho absoluto. São iniciados sem shell nem argumentos, com a pasta do programa como diretório de trabalho. Pastas são validadas novamente antes de abrir. Links personalizados exigem HTTPS sem credenciais. Limite de 100 atalhos personalizados. Nenhum arquivo pessoal é removido ao excluir um atalho.
+Um clique individual em um atalho do Work também usa essas regras. Principal e Descanso continuam com abertura normal.
 
-Na prévia web, links, temas e personalização por URL funcionam. Seletores de pastas/.exe, Brave e ações Windows precisam da versão desktop.
+**Alguns programas, jogos, iniciadores e o Explorador podem ignorar a solicitação de minimizar; prompts de administrador também podem aparecer.** Não há garantia de impedir toda tomada de foco por terceiros. A execução real dessa versão ainda precisa ser conferida no Windows.
 
-## Validação desta entrega
+## Conectar o Brave uma vez
 
-**59 testes Playwright e 23 testes Rust passaram**, com análise Clippy do núcleo sem avisos e build TypeScript/Vite aprovado. O relatório [VALIDACAO.md](VALIDACAO.md) distingue testes de navegador, simulação de IPC e execução nativa. A v0.1.6 foi trabalhada em Linux; os fluxos reais de seletor, abertura de jogos/pastas e hooks precisam ser conferidos no Windows.
+1. No Orbit, abra **engrenagem → Brave no Work → Preparar extensão**. O Orbit prepara a integração local e abre a pasta da extensão.
+2. No Brave, entre em `brave://extensions`, ative **Modo de desenvolvedor** e clique em **Carregar sem compactação**.
+3. Selecione a pasta aberta pelo Orbit: `%LOCALAPPDATA%\app.orbit.launcher\browser-extension`.
+4. Confira **Brave conectado** nas configurações. Se necessário, abra o ícone da extensão e clique em **Reconectar**.
 
-![Prévia dos quatro temas sobre fundos com texto, composta no navegador](downloads/orbit-v0.1.6-preview.png)
+Instale no perfil que você usa para trabalhar. A conexão atende **um perfil por vez** e só verifica as abas acessíveis à extensão nesse perfil. Se trocar de perfil, desconecte/desative a extensão no anterior e reconecte no desejado.
 
-## Desenvolver e verificar
+Se o Brave estiver fechado, o Orbit tenta iniciá-lo minimizado nas pastas padrão de instalação. Sem a extensão conectada, informa a falha dos sites e continua os outros atalhos; não abre sites às cegas, evitando duplicações. Se o navegador demorar a iniciar, aguarde a conexão e tente novamente.
 
-Node.js 22.12+ ou 24, Rust MSVC, Windows SDK/Visual Studio Build Tools C++ e WebView2.
+A extensão solicita acesso às abas, comunicação nativa e alarmes de reconexão. Não guarda histórico de navegação. A comunicação com o Orbit ocorre em localhost com um token renovado a cada execução. [Guia da extensão e solução de problemas](browser-extension/README.md).
+
+## Aparência e dados
+
+Temas **Oceano, Ametista, Grafite e Papel**, com leitura protegida sobre fundos claros e escuros. Janela padrão de 720×440 unidades lógicas; bola de 304 px. Em áreas menores, bola e lista usam a mesma área em etapas; em alturas muito baixas, os setores viram uma grade. Nomes longos ficam em duas linhas, com nome completo no tooltip.
+
+Atalhos, histórico e preferências continuam em `%LOCALAPPDATA%\app.orbit.launcher\orbit.sqlite3`. Não houve migração destrutiva. Limite de 100 atalhos personalizados. Pastas e `.exe` são validados novamente ao abrir; executáveis não recebem argumentos livres ou comandos de shell. Links personalizados exigem HTTPS sem credenciais.
+
+Na prévia web, temas e cadastro de URLs funcionam. Ícones nativos, seletores, ações Windows e a abertura do Work precisam da versão desktop.
+
+![Prévia dos três modos e quatro temas, composta no Chromium](downloads/orbit-v0.1.7-preview.png)
+
+## Testes e desenvolvimento
+
+Resultados e limites estão em [VALIDACAO.md](VALIDACAO.md). O executável foi compilado em Linux para Windows; não foi executado no Windows nesta rodada. O Chromium gerenciado bloqueou a instalação da extensão, portanto a conexão completa com o Brave real permanece pendente. A lógica da extensão, o host Rust e a fronteira da interface foram testados separadamente.
+
+No Windows: Node 22.12+ ou 24, Rust MSVC, Visual Studio Build Tools C++, Windows SDK e WebView2.
 
 ```powershell
 npm.cmd ci
 npm.cmd run tauri -- dev
 npm.cmd test
+npm.cmd run test:extension
 npm.cmd run build
-cargo test --manifest-path src-tauri/Cargo.toml --locked
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+cargo test --lib --manifest-path src-tauri/Cargo.toml --locked
+cargo clippy --lib --manifest-path src-tauri/Cargo.toml --locked -- -D warnings
 npm.cmd run tauri -- build
 ```
 
-Para testar a interface no Linux, use `npm ci`, `npm run build`, `npx playwright install chromium` e `npm test`. Se houver Chromium instalado, defina `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`. Os 23 testes do núcleo, inclusive geometria de monitores, rodam com `cargo test --lib --manifest-path src-tauri/Cargo.toml --locked`.
+No Linux, `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` permite usar um Chromium instalado. Os testes do núcleo rodam com `cargo test --lib --manifest-path src-tauri/Cargo.toml --locked`. Após `cargo build --bin orbit --manifest-path src-tauri/Cargo.toml --locked`, `node tools/check-native-host.mjs` verifica o host Rust real com pipes binários e localhost. `node tools/visual-preview.mjs` gera a composição e verifica contraste sem desfoque.
 
-`node tools/visual-preview.mjs` gera composições e verifica contraste com o desfoque desligado; requer Chromium (ou o caminho em `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`). Saída em `test-results/visual`, alterável com `ORBIT_VISUAL_OUTPUT`.
-
-O Playwright utiliza Edge no Windows. `tools/check-rest-native.mjs` testa o executável Windows, criando e removendo apenas seus próprios atalhos de teste; habilita depuração somente nesse processo de teste. Não é usado no funcionamento normal.
-
-## Referência dos streamings
-
-Seleção para o Brasil baseada nos seis primeiros do ranking de interesse JustWatch publicado pela [Teleco](https://teleco.com.br/streaming_mshare.asp), conforme a documentação da v0.1.5 recebida. Esse indicador não equivale a uma contagem de assinantes. Os endereços foram preservados da v0.1.5; alguns serviços podem exigir login ou assinatura.
-
-O ZIP portátil desta entrega não possui assinatura digital. O instalador NSIS pode ser gerado no Windows; ele não foi gerado nesta rodada. Consulte `VALIDACAO.md` para os testes realizados e limites de validação desta entrega.
+Este ZIP é portátil e não possui assinatura digital. Instalador NSIS não foi gerado nesta entrega. Base do projeto: fonte 0.1.5 enviada pelo usuário e correções 0.1.6; o histórico de validação foi preservado em `docs/`.

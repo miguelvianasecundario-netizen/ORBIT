@@ -45,7 +45,7 @@ impl Settings {
         ) {
             return Err("Tema inválido.".into());
         }
-        if !matches!(self.mode.as_str(), "main" | "rest") {
+        if !matches!(self.mode.as_str(), "main" | "rest" | "work") {
             return Err("Modo inválido.".into());
         }
         match self.trigger.as_str() {

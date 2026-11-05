@@ -1,4 +1,4 @@
-export type Mode = "main" | "rest";
+export type Mode = "main" | "rest" | "work";
 export type Theme = "ocean" | "amethyst" | "graphite" | "paper";
 export type CategoryId =
   | "browser"
@@ -8,7 +8,12 @@ export type CategoryId =
   | "games"
   | "streaming"
   | "orbit-main"
-  | "orbit-rest";
+  | "orbit-rest"
+  | "work-apps"
+  | "work-browser"
+  | "work-projects"
+  | "orbit-work";
+export type ViewId = CategoryId | "work-all";
 export interface Action {
   type: "url" | "folder" | "executable";
   value: string;
@@ -36,4 +41,18 @@ export interface OrbitState {
   usage: Record<string, Usage>;
   settings: Settings;
   shortcuts: MenuItem[];
+}
+
+export interface WorkResult {
+  id: string;
+  title: string;
+  status: "opened" | "alreadyOpen" | "error";
+  detail?: string;
+}
+export interface WorkReport {
+  results: WorkResult[];
+}
+export interface BrowserStatus {
+  connected: boolean;
+  prepared: boolean;
 }
