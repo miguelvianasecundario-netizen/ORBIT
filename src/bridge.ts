@@ -1,4 +1,5 @@
 import { DEFAULT_HOTKEY } from "./hotkey";
+import { DEFAULT_APPEARANCE, normalizeAppearance } from "./appearance";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { items, themes, categories } from "./data";
@@ -19,6 +20,7 @@ function empty(): OrbitState {
       hotkey: DEFAULT_HOTKEY,
       theme: "ocean",
       mode: "main",
+      ...DEFAULT_APPEARANCE,
     },
     shortcuts: [],
   };
@@ -51,6 +53,7 @@ function read(): OrbitState {
       value.settings.theme = "ocean";
     if (!["main", "rest", "work"].includes(value.settings.mode))
       value.settings.mode = "main";
+    Object.assign(value.settings, normalizeAppearance(value.settings));
     return value;
   } catch {
     throw new Error(
@@ -61,8 +64,11 @@ function read(): OrbitState {
 function write(state: OrbitState) {
   localStorage.setItem(key, JSON.stringify(state));
 }
-export const loadState = (): Promise<OrbitState> =>
-  native ? invoke("get_state") : Promise.resolve().then(read);
+export async function loadState(): Promise<OrbitState> {
+  const state = native ? await invoke<OrbitState>("get_state") : read();
+  Object.assign(state.settings, normalizeAppearance(state.settings));
+  return state;
+}
 export async function execute(item: MenuItem) {
   if (native) {
     if (

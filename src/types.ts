@@ -27,7 +27,14 @@ export interface MenuItem {
   action?: Action;
   children?: MenuItem[];
 }
-export interface Settings {
+export interface AppearanceSettings {
+  menuTransparency: number;
+  selectionTransparency: number;
+  panelTransparency: number;
+  appTransparency: number;
+  iconsOnly: boolean;
+}
+export interface Settings extends AppearanceSettings {
   hotkey: string;
   trigger: "middle" | "alt-middle" | "keyboard";
   theme: Theme;

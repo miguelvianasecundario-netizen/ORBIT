@@ -97,8 +97,10 @@ button svg {
   gap: 8px;
 }
 .compact-controls {
-  height: 44px;
+  min-height: 44px;
+  height: auto;
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 8px;
@@ -142,7 +144,7 @@ button svg {
 /* Keep desktop text from competing with labels, including between the
    sectors and the center. This works without cross-window backdrop blur. */
 .wheel::before {
-  content: "";
+  content: none;
   position: absolute;
   inset: 3%;
   border-radius: 50%;
@@ -1208,4 +1210,218 @@ body.native {
 .app-icon > .automatic-icon {
   width: 22px;
   height: 22px;
+}
+
+/* Each surface has its own alpha; text and icons retain full opacity.
+   The SVG base has holes under the sectors, so their fills never stack. */
+.wheel-base,
+.segment {
+  fill: var(--menu-fill, var(--surface));
+}
+.segment.selected {
+  fill: var(--selection-fill, var(--selected));
+}
+.core,
+.core:hover {
+  background: transparent;
+}
+.core:hover {
+  border-color: var(--mint);
+}
+.radial-column .icon-button,
+.radial-column .mode-arrow::before,
+.radial-column .page-controls {
+  background: var(--menu-fill, var(--surface));
+}
+.radial-column .page-controls .icon-button {
+  background: transparent;
+}
+.branch {
+  background: var(--panel-fill, var(--surface));
+}
+.branch-heading .icon-button {
+  background: transparent;
+}
+.bubble {
+  background: var(--app-fill, var(--item));
+}
+.bubble:hover {
+  background: var(--app-hover-fill, var(--hover));
+}
+#toggle-icons-only[aria-pressed="true"] {
+  color: var(--mint);
+  border-color: var(--mint);
+}
+
+.transparency-control {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.85fr) minmax(70px, 1fr) 36px;
+  gap: 8px;
+  margin: 6px 0;
+  align-items: center;
+}
+.transparency-control label {
+  margin: 0;
+}
+.transparency-control > span {
+  grid-column: 3;
+  grid-row: 1;
+  text-align: right;
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.transparency-control input[type="range"] {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--mint);
+  cursor: pointer;
+}
+.settings-section .appearance-toggle {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+}
+.appearance-toggle input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--mint);
+  flex-shrink: 0;
+}
+
+.icons-only .category > span:not(.automatic-icon),
+.icons-only .core > span,
+.icons-only .bubble-copy,
+.icons-only .bubble-arrow,
+.icons-only .branch-heading h1,
+.icons-only .branch-heading .count,
+.icons-only .page-controls > span {
+  display: none;
+}
+.icons-only .category {
+  gap: 0;
+}
+.icons-only .category .icon {
+  width: 26px;
+  height: 26px;
+}
+.icons-only .branch {
+  width: 176px;
+  height: auto;
+  max-height: 100%;
+  padding: 10px;
+}
+.icons-only .branch-heading {
+  gap: 6px;
+  min-height: 44px;
+  margin-bottom: 6px;
+}
+.icons-only .branch-list.has-items {
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
+  grid-auto-rows: 44px;
+  justify-content: center;
+  gap: 6px;
+  max-height: 264px;
+  flex: 0 1 auto;
+}
+.icons-only .bubble {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 6px;
+  justify-content: center;
+  gap: 0;
+}
+.icons-only .branch.work-summary {
+  width: 260px;
+}
+.icons-only .branch.work-summary .branch-list {
+  max-height: 272px;
+}
+.icons-only .compact-controls {
+  gap: 6px;
+}
+.icons-only .compact-controls #close {
+  order: 1;
+}
+.icons-only .compact-controls .page-controls {
+  order: 2;
+}
+@media (min-width: 620px) and (min-height: 380px) {
+  .icons-only .launcher {
+    width: min(100%, 448px);
+    height: auto;
+    max-height: 100%;
+    grid-template-columns: 256px minmax(0, 176px);
+    gap: 16px;
+  }
+  .icons-only .launcher.branch-left {
+    grid-template-columns: minmax(0, 176px) 256px;
+  }
+  .icons-only .launcher.work-summary-open {
+    width: min(100%, 532px);
+    grid-template-columns: 256px minmax(0, 260px);
+  }
+  .icons-only .launcher.work-summary-open.branch-left {
+    grid-template-columns: minmax(0, 260px) 256px;
+  }
+  .icons-only .radial-column,
+  .icons-only .orbit-navigation {
+    width: 256px;
+  }
+  .icons-only .orbit-navigation {
+    height: 208px;
+  }
+  .icons-only .wheel {
+    width: 208px;
+  }
+  .icons-only .core {
+    width: 52px;
+    height: 52px;
+    left: calc(50% - 26px);
+    top: calc(50% - 26px);
+  }
+}
+@media (max-width: 619px) and (min-height: 320px) {
+  .icons-only .radial-column,
+  .icons-only .orbit-navigation {
+    width: min(256px, 100%);
+  }
+  .icons-only .orbit-navigation {
+    height: 208px;
+    flex-shrink: 0;
+  }
+  .icons-only .wheel {
+    width: 208px;
+  }
+  .icons-only .core {
+    width: 52px;
+    height: 52px;
+    left: calc(50% - 26px);
+    top: calc(50% - 26px);
+  }
+}
+@media (max-height: 319px) {
+  .category {
+    background: var(--menu-fill, var(--surface));
+  }
+  .category.active {
+    background: var(--selection-fill, var(--selected));
+  }
+  .icons-only .branch-list.has-items,
+  .icons-only .branch.work-summary .branch-list {
+    max-height: none;
+  }
 }

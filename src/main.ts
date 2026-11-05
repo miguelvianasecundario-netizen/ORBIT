@@ -30,6 +30,12 @@ import { radial, wheelOptions } from "./radial";
 import { categories, adjacentMode } from "./data";
 import { workView, workItems } from "./work-view";
 import { itemIcon, hydrateIcons } from "./item-icons";
+import {
+  DEFAULT_APPEARANCE,
+  applyAppearance,
+  transparencyControls,
+  type TransparencyKey,
+} from "./appearance";
 import type {
   CategoryId,
   ViewId,
@@ -40,6 +46,7 @@ import type {
   Settings,
   Theme,
   Mode,
+  AppearanceSettings,
 } from "./types";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 let state: OrbitState = {
@@ -49,10 +56,13 @@ let state: OrbitState = {
     hotkey: DEFAULT_HOTKEY,
     theme: "ocean",
     mode: "main",
+    ...DEFAULT_APPEARANCE,
   },
   shortcuts: [],
 };
 const compactLayout = () => innerWidth < 620 || innerHeight < 380;
+let appearanceDraft: Partial<AppearanceSettings> = {};
+let appearanceTimer: ReturnType<typeof setTimeout> | undefined;
 let wheelPage = 0;
 let settingsQueue: Promise<void> = Promise.resolve();
 let preferenceRevision = 0;
@@ -66,9 +76,40 @@ const defaultCategory = (): CategoryId =>
       : "work-browser";
 function applyTheme() {
   document.documentElement.dataset.theme = state.settings.theme;
+  applyAppearance({ ...state.settings, ...appearanceDraft });
+}
+function syncAppearanceControls() {
+  const appearance = { ...state.settings, ...appearanceDraft };
+  for (const { key } of transparencyControls) {
+    const input = app.querySelector<HTMLInputElement>(
+      `[data-transparency="${key}"]`,
+    );
+    if (input) input.value = String(appearance[key]);
+    if (input)
+      input.setAttribute("aria-valuetext", `${appearance[key]}% transparente`);
+    const output = app.querySelector<HTMLElement>(`#${key}-value`);
+    if (output) output.textContent = `${appearance[key]}%`;
+  }
+  const checkbox = app.querySelector<HTMLInputElement>("#icons-only");
+  if (checkbox) checkbox.checked = appearance.iconsOnly;
+  const toggle = app.querySelector<HTMLButtonElement>("#toggle-icons-only");
+  if (toggle) {
+    toggle.title = appearance.iconsOnly ? "Mostrar nomes" : "Modo só ícones";
+    toggle.setAttribute("aria-label", toggle.title);
+    toggle.setAttribute("aria-pressed", String(appearance.iconsOnly));
+    toggle.innerHTML = icon(appearance.iconsOnly ? "expand" : "minimize");
+  }
+}
+function commitAppearanceDraft() {
+  clearTimeout(appearanceTimer);
+  const patch = appearanceDraft;
+  appearanceDraft = {};
+  if (Object.keys(patch).length)
+    void updateSettings(patch).catch((error) => notify(String(error), true));
 }
 function syncPreferenceControls() {
   applyTheme();
+  syncAppearanceControls();
   for (const el of app.querySelectorAll<HTMLElement>("[data-theme-choice]"))
     el.setAttribute(
       "aria-pressed",
@@ -141,6 +182,7 @@ function focusVisible(...selectors: string[]) {
   }
 }
 function closePanel() {
+  commitAppearanceDraft();
   panel = false;
   render();
   focusVisible(panelOpener, "#branch-settings", "#settings", ".category");
@@ -191,7 +233,7 @@ function show() {
   render();
 }
 function actionButton(item: MenuItem, i: number) {
-  return `<button class="bubble" style="--i:${i}" data-item="${esc(item.id)}" aria-label="${esc(item.title)}"><span class="app-icon ${esc(item.icon)}">${itemIcon(item)}</span><span class="bubble-copy"><strong>${esc(item.title)}</strong><small>${esc(item.description ?? (item.action?.type === "folder" ? "Pasta favorita" : "Seu atalho"))}</small></span>${icon(item.children ? "chevron" : "arrow", "bubble-arrow")}</button>`;
+  return `<button class="bubble" style="--i:${i}" data-item="${esc(item.id)}" aria-label="${esc(item.title)}" title="${esc(item.title)}"><span class="app-icon ${esc(item.icon)}">${itemIcon(item)}</span><span class="bubble-copy"><strong>${esc(item.title)}</strong><small>${esc(item.description ?? (item.action?.type === "folder" ? "Pasta favorita" : "Seu atalho"))}</small></span>${icon(item.children ? "chevron" : "arrow", "bubble-arrow")}</button>`;
 }
 function render(animate = false) {
   applyTheme();
@@ -225,12 +267,12 @@ function render(animate = false) {
   <div class="shell ${opened ? "" : "closed"}">
     ${
       opened
-        ? `<main class="workspace" aria-label="Launcher Orbit"><div class="launcher ${selected ? "has-selection" : ""} ${branchSide === "left" ? "branch-left" : ""}" data-launcher>
-      <div class="radial-column">${radial(selected, state, wheelPage)}<div class="compact-controls"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button><button class="icon-button" id="add-to-wheel" aria-label="Adicionar à bola" title="Adicionar à bola">${icon("plus")}</button>${pageCount > 1 ? `<div class="page-controls"><button class="icon-button" id="previous-page" aria-label="Página anterior de opções">${icon("chevronLeft")}</button><span>${wheelPage + 1}/${pageCount}</span><button class="icon-button" id="next-page" aria-label="Próxima página de opções">${icon("chevron")}</button></div>` : ""}<button class="icon-button dismiss" id="close" aria-label="Fechar launcher" title="Fechar (Esc)">${icon("close")}</button></div></div>
-      <section class="branch ${!selected && !query ? "collapsed" : ""}" aria-label="Opções da categoria">
+        ? `<main class="workspace" aria-label="Launcher Orbit"><div class="launcher ${selected === "work-all" ? "work-summary-open" : ""} ${selected ? "has-selection" : ""} ${branchSide === "left" ? "branch-left" : ""}" data-launcher>
+      <div class="radial-column">${radial(selected, state, wheelPage)}<div class="compact-controls"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button><button class="icon-button" id="add-to-wheel" aria-label="Adicionar à bola" title="Adicionar à bola">${icon("plus")}</button>${pageCount > 1 ? `<div class="page-controls"><button class="icon-button" id="previous-page" aria-label="Página anterior de opções">${icon("chevronLeft")}</button><span>${wheelPage + 1}/${pageCount}</span><button class="icon-button" id="next-page" aria-label="Próxima página de opções">${icon("chevron")}</button></div>` : ""}<button class="icon-button" id="toggle-icons-only" aria-label="Modo só ícones" title="Modo só ícones">${icon("minimize")}</button><button class="icon-button dismiss" id="close" aria-label="Fechar launcher" title="Fechar (Esc)">${icon("close")}</button></div></div>
+      <section class="branch ${selected === "work-all" ? "work-summary" : ""} ${!selected && !query ? "collapsed" : ""}" aria-label="Opções da categoria">
         <header class="branch-heading"><button class="icon-button back-list" id="back-list" aria-label="Voltar às categorias">${icon("back")}</button><h1>${esc(selected === "work-all" ? "Work" : (trail.at(-1)?.title ?? categories.find((c) => c.id === selected)?.title ?? "Escolha uma categoria"))}</h1><span class="count" aria-label="${selected === "work-all" ? workItems(state).length : listing.length} opções">${selected === "work-all" ? workItems(state).length : listing.length}</span>${selected && selected !== "work-all" ? `<button class="icon-button branch-add" id="add-category-shortcut" aria-label="${addLabel}" title="${addLabel}">${icon("plus")}</button>` : ""}<button class="icon-button branch-settings" id="branch-settings" aria-label="Configurações">${icon("settings")}</button></header>
         <svg class="connectors" viewBox="0 0 100 360" preserveAspectRatio="none" aria-hidden="true">${[45, 135, 225, 315].map((y) => `<path d="M0 180 C60 180 35 ${y} 100 ${y}"/>`).join("")}<circle cx="4" cy="180" r="4"/></svg>
-        <div class="branch-list">${selected === "work-all" ? workView(state, workReport, workBusy, brave) : listing.map(actionButton).join("") + (listing.length === 0 ? `<p class="empty-list">Adicione seus atalhos pelo + no cabeçalho.</p>` : "")}</div>
+        <div class="branch-list ${listing.length && selected !== "work-all" ? "has-items" : ""}">${selected === "work-all" ? workView(state, workReport, workBusy, brave) : listing.map(actionButton).join("") + (listing.length === 0 ? `<p class="empty-list">Adicione seus atalhos pelo + no cabeçalho.</p>` : "")}</div>
       </section>
     </div></main>`
         : `<div class="resting"><button class="icon-button" id="settings" aria-label="Configurações" title="Configurações">${icon("settings")}</button><button class="primary" id="reopen">Abrir Orbit ${icon("arrow")}</button><p><kbd>${esc(hotkeyLabel(state.settings.hotkey))}</kbd></p></div>`
@@ -238,6 +280,7 @@ function render(animate = false) {
     ${panel ? settingsView(state, selected === "work-all" ? null : selected) : ""}
   </div>`;
   bind();
+  syncAppearanceControls();
   hydrateIcons(app, available);
   void refreshBrowserStatus();
   if (animate) {
@@ -247,6 +290,39 @@ function render(animate = false) {
 }
 
 function bind() {
+  for (const input of app.querySelectorAll<HTMLInputElement>(
+    "[data-transparency]",
+  )) {
+    input.oninput = () => {
+      const key = input.dataset.transparency as TransparencyKey;
+      appearanceDraft[key] = input.valueAsNumber;
+      applyTheme();
+      syncAppearanceControls();
+      clearTimeout(appearanceTimer);
+      appearanceTimer = setTimeout(commitAppearanceDraft, 250);
+    };
+    input.onchange = commitAppearanceDraft;
+  }
+  app
+    .querySelector<HTMLInputElement>("#icons-only")
+    ?.addEventListener("change", (event) => {
+      commitAppearanceDraft();
+      void updateSettings({
+        iconsOnly: (event.currentTarget as HTMLInputElement).checked,
+      }).catch((error) => notify(String(error), true));
+    });
+  app.querySelector("#toggle-icons-only")?.addEventListener("click", () => {
+    void updateSettings({ iconsOnly: !state.settings.iconsOnly }).catch(
+      (error) => notify(String(error), true),
+    );
+  });
+  app.querySelector("#reset-appearance")?.addEventListener("click", () => {
+    clearTimeout(appearanceTimer);
+    appearanceDraft = {};
+    void updateSettings({ ...DEFAULT_APPEARANCE }).catch((error) =>
+      notify(String(error), true),
+    );
+  });
   for (const button of app.querySelectorAll<HTMLElement>("[data-mode-switch]"))
     button.onclick = () => {
       const mode: Mode = adjacentMode(

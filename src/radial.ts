@@ -69,9 +69,14 @@ export function radial(
   const previous = modeNames[adjacentMode(state.settings.mode, -1)];
   return `<div class="orbit-navigation">
     <button class="mode-arrow previous" data-mode-switch="previous" aria-label="Bola anterior: ${previous}" title="Trocar para ${previous}">${icon("chevronLeft")}</button>
-    <div class="wheel"><div class="wheel-halo"></div><svg class="wheel-glass" viewBox="0 0 500 500" aria-hidden="true">${options.map((c, i) => `<path class="segment ${selected === c.id ? "selected" : ""} ${c.kind === "add" ? "add-segment" : ""}" d="${wedge(angles[i][0], angles[i][1])}"/>`).join("")}<circle class="outer-line" cx="250" cy="250" r="244"/></svg>
+    <div class="wheel"><div class="wheel-halo"></div><svg class="wheel-glass" viewBox="0 0 500 500" aria-hidden="true"><path class="wheel-base" fill-rule="evenodd" d="M250 15 A235 235 0 1 1 250 485 A235 235 0 1 1 250 15Z ${angles
+      .slice(0, options.length)
+      .map(([start, end]) => wedge(start, end))
+      .join(
+        " ",
+      )}"/>${options.map((c, i) => `<path class="segment ${selected === c.id ? "selected" : ""} ${c.kind === "add" ? "add-segment" : ""}" d="${wedge(angles[i][0], angles[i][1])}"/>`).join("")}<circle class="outer-line" cx="250" cy="250" r="244"/></svg>
     ${options.map((c, i) => `<button title="${esc(c.title)}" class="category slot-${i} ${selected === c.id ? "active" : ""}" data-${c.kind}="${esc(c.id)}" aria-label="${esc(c.title)}" ${c.kind === "category" ? `aria-pressed="${selected === c.id}"` : ""}>${c.kind === "item" ? itemIcon(state.shortcuts.find((item) => item.id === c.id)!) : icon(c.icon)}<span>${esc(c.title)}</span></button>`).join("")}
-    <button class="core" id="back" aria-label="${selected ? "Voltar às categorias" : "Centro do Orbit"}" title="${selected ? "Recolher categoria" : "Escolha uma categoria"}">${icon(selected ? "back" : state.settings.mode === "rest" ? "moon" : state.settings.mode === "work" ? "briefcase" : "orbit")}<span>${modeNames[state.settings.mode]}</span></button></div>
+    <button class="core" id="back" aria-label="${selected ? "Voltar às categorias" : "Centro do Orbit"}" title="${modeNames[state.settings.mode]} — ${selected ? "Recolher categoria" : "Escolha uma categoria"}">${icon(selected ? "back" : state.settings.mode === "rest" ? "moon" : state.settings.mode === "work" ? "briefcase" : "orbit")}<span>${modeNames[state.settings.mode]}</span></button></div>
     <button class="mode-arrow next" data-mode-switch="next" aria-label="Próxima bola: ${next}" title="Trocar para ${next}">${icon("chevron")}</button>
   </div>`;
 }

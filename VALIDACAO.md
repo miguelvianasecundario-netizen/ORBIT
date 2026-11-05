@@ -1,40 +1,38 @@
-# Validação — ORBIT 0.1.7
+# Validação — ORBIT 0.1.8
 
-Ambiente: Linux, Node 24, Chromium 155 e Rust, com compilação cruzada para Windows x64 GNU. Base: fonte 0.1.5 enviada pelo usuário e correções 0.1.6. [Relatório 0.1.6](docs/validation-v0.1.6.md).
+Ambiente: Linux, Node 24, Chromium 155 e Rust. Compilação cruzada para Windows x64 GNU. [Relatório anterior — 0.1.7](docs/validation-v0.1.7.md).
 
 ## Resultados
 
-- **72 testes Playwright**: três modos, cadastro por categoria/bola, preservação de preferências, nomes, foco, repetição de cliques, Work vazio, resultado de lote, atalho Work individual e carregamento/fallback de ícones.
-- **32 testes Rust**: validação e persistência, escopo do Work, arquivo removido, histórico apenas de novas aberturas, autenticação, rejeição de segundo perfil, framing limitado, IDs de resposta incorretos, caminhos UNC e ícones declarados em HTML.
-- **5 testes Node da extensão**: URLs abertas e pendentes, duplicação no lote, janela minimizada quando não há janela normal, falhas por item, URLs inválidas e serialização de pedidos simultâneos com heartbeat. A API do Chrome é simulada nesses testes.
-- **Host Rust real aprovado** em `tools/check-native-host.mjs`: processo Linux, stdin/stdout binários, conexão TCP em localhost, token, encaminhamento nos dois sentidos e encerramento ao fechar a entrada. O lado Orbit da conexão é um cliente de teste; não envolve Brave nem registro Windows.
-- **TypeScript/Vite aprovados. Clippy sem avisos**, com `-D warnings`, no núcleo Linux e no alvo Windows.
-- **Release Windows x64** compilado com `custom-protocol`, interface incorporada e `WebView2Loader.dll`. Verificação de ZIP, SHA-256, versões e arquivos incorporados acompanha o empacotamento. O executável não foi executado no Windows nesta rodada.
+- **80 testes Playwright passaram na execução completa**, incluindo os oito novos cenários de aparência.
+- **33 testes Rust passaram**, incluindo migração dos valores antigos, reabertura do banco, limites independentes de transparência e rejeição de valores negativos/fracionários ou acima de 100.
+- **5 testes da extensão passaram**. O comportamento da integração Brave permanece o da versão 0.1.7.
+- **TypeScript/Vite e Clippy Linux/Windows aprovados**, com `-D warnings`.
+- **Release Windows x64 compilado**, com interface e extensão incorporadas. ZIP, versões, arquivos incorporados e SHA-256 conferidos no empacotamento. O executável não foi executado no Windows neste ambiente.
 
-Na última execução completa da interface, 71 casos passaram e o teste de lote avançou antes de terminar seu cadastro assíncrono. O teste passou a aguardar a confirmação visível de salvamento; os 13 casos Work foram então reexecutados e passaram. Os 72 casos acima descrevem a cobertura final dessas execuções.
+## Casos novos
 
-## Interface e correções
+1. Os quatro fundos recebem alfas independentes, mantendo ícones e textos com opacidade 1.
+2. A base SVG possui recortes sob os setores: a transparência da seleção não fica escondida por uma camada opaca atrás.
+3. Transparência de 100% remove o preenchimento, preservando nomes e controles.
+4. Configurações antigas ganham valores padrão e mantêm tema, modo e atalho global.
+5. Trocar tema, transparência e modo só ícones preserva o rascunho do cadastro. As preferências continuam após recarregar.
+6. O arraste usa prévia imediata e agrupa gravações; 70 eventos seguidos geram uma gravação. Uma falha do atalho global não contamina o salvamento seguinte.
+7. Modo só ícones mantém botões de pelo menos 44×44 e acesso às configurações em 720×440, 620×380, 380×264 e 320×480.
+8. Navegação entre Principal/Descanso/Work, paginação, nomes acessíveis e abertura de um link continuam funcionando no modo só ícones. O site desse teste é uma resposta local interceptada pelo navegador.
 
-Layouts anteriores: 720×440, 620×380, 540×340, 380×264 e 320×480, com fatores de rasterização 100%, 125%, 150% e 200%. Work também foi verificado em 720×440, 380×264 e 320×480. Isso não emula monitores físicos com DPI misto.
+A suíte anterior também confere tamanhos 540×340 e fatores de rasterização 100%, 125%, 150% e 200%. Esses testes não emulam monitores físicos com DPI misto.
 
-A suíte encontrou transbordamento transitório da lista em uma janela estreita e alta, causado pela rotação da animação. No layout compacto, a lista agora usa um deslocamento vertical curto; a bola mantém seu balanço de 200 ms. Movimento reduzido continua respeitado.
+## Revisão visual
 
-O botão de adicionar da categoria recebeu um rótulo distinto do botão que confirma o formulário. Ícones têm espaço fixo e imagem carregada antes de ocultar o símbolo de reserva; nenhum texto passa a depender da presença do favicon.
+Conferidos os quatro temas, com fundos padrão, fundos mais transparentes e o modo só ícones. A imagem em `downloads/orbit-v0.1.8-preview.png` é uma composição no Chromium sobre fundos com texto, com desfoque CSS desligado; não é captura nativa do Windows. A seção de configurações também foi conferida visualmente.
 
-As composições dos quatro temas foram conferidas sobre fundos claros/escuros com texto, sem desfoque CSS. Contraste calculado: texto mínimo **4,95:1**, símbolos da lista do Navegador mínimo **4,71:1**. Método: cores CSS computadas, composição alfa sobre preto/branco e luminância sRGB WCAG. Não é uma auditoria completa nem uma medição dos pixels do Windows; não mede as cores internas de logos remotos.
+As medições de contraste do script se referem às cores padrão dos temas: mínimo 4,95:1 para texto e 4,71:1 para os símbolos medidos. **Esses valores não garantem contraste sobre qualquer fundo após aumentar a transparência.** O usuário pode voltar aos valores padrão pelo botão Restaurar.
 
-Os testes em `tests/helpers/native-boundary.ts` simulam **somente o IPC**. Eles não registram teclas no Windows, não abrem seletores reais, não extraem ícones de `.exe` e não iniciam programas. Favicons externos são substituídos por fixtures quando interceptáveis; ícones nativos são verificados com imagem incorporada, sem depender de um site real.
+## Limites
 
-## Limites e verificações pendentes
+A composição transparente real do Windows, ícones nativos, hooks, seletores e monitores físicos não foram executados aqui. Os testes de preferências nativas na interface simulam somente a fronteira IPC; a persistência e validação reais são testadas em Rust/SQLite.
 
-O teste completo `tools/check-brave-extension.mjs` tentou carregar a extensão real no Chromium com perfil temporário. A política gerenciada `ExtensionInstallBlocklist: ["*"]` bloqueou a instalação; ela não foi alterada. Portanto, **a extensão não foi validada conectada ao Brave real** nesta entrega. O ID calculado da chave pública do manifesto e a origem esperada pelo host foram conferidos.
+A integração completa com Brave permanece pendente de validação no Windows: a política do Chromium gerenciado bloqueia carregar extensões externas. Na 0.1.7, o host Rust foi testado separadamente por pipes e localhost; veja o relatório anterior. Alguns aplicativos e o Explorador podem ignorar a solicitação de abrir minimizados no Work.
 
-Ainda precisam de validação no Windows:
-
-- Preparar a extensão, conferir a chave HKCU, carregar/recarregar no Brave e obter **Brave conectado**.
-- Abrir duas vezes o mesmo Work, verificar abas existentes/pendentes e confirmar que a aba ativa não muda; repetir com Brave fechado e com perfis diferentes.
-- Confirmar minimização e foco com aplicativos reais, iniciadores, aplicativos já abertos e Explorador. Programas podem ignorar o estado solicitado, abrir processos filhos diferentes ou pedir elevação; o Orbit não garante minimizar todos eles.
-- Verificar ícones reais de executáveis/pastas e downloads HTTPS de ícones pelo WinHTTP.
-- Seletores nativos, hooks globais, transparência sobre o desktop, monitores físicos com DPI misto e instalação/desinstalação NSIS.
-
-Os scripts Windows anteriores em `tools/check-native.mjs` e `tools/check-rest-native.mjs` não foram executados nesta rodada. O teste completo da extensão em Chromium Linux também não substitui os fluxos Windows acima.
+Instalador NSIS e assinatura digital não foram gerados. O download desta entrega é portátil.

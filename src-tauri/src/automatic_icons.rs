@@ -108,7 +108,7 @@ mod platform {
                 return Err("Destino de ícone inválido.".into());
             }
             let host = wide(url.host_str().ok_or("Site inválido.")?);
-            let agent = wide("Orbit/0.1.7 (site icon)");
+            let agent = wide("Orbit/0.1.8 (site icon)");
             let session = Internet(unsafe {
                 WinHttpOpen(
                     agent.as_ptr(),

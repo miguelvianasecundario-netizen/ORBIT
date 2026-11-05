@@ -1,8 +1,8 @@
-# ORBIT 0.1.7 — Work, atalhos e ícones automáticos
+# ORBIT 0.1.8 — transparência por área e modo só ícones
 
-Um terceiro menu para reunir seu trabalho: aplicativos, sites e pastas, com **Abrir tudo**. Os modos Principal e Descanso, quatro temas, atalhos e preferências das versões anteriores continuam disponíveis.
+Ajuste separadamente os fundos do círculo, da seleção, do painel lateral e dos aplicativos. O novo modo minimizado reduz o menu e mostra só ícones, com os nomes ao passar o mouse. Inclui Principal, Descanso, Work e os quatro temas.
 
-[**Baixar para Windows x64**](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-windows-x64-v0.1.7.zip) · [**Baixar o código-fonte**](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-codigo-fonte-v0.1.7.zip)
+[**Baixar para Windows x64**](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-windows-x64-v0.1.8.zip) · [**Baixar o código-fonte**](https://github.com/miguelvianasecundario-netizen/lanchonete/raw/refs/heads/orbit-download-v0.1.0/downloads/orbit-codigo-fonte-v0.1.8.zip)
 
 ## Abrir e atualizar
 
@@ -11,6 +11,21 @@ Um terceiro menu para reunir seu trabalho: aplicativos, sites e pastas, com **Ab
 3. Abra `orbit.exe`, com `WebView2Loader.dll` ao lado dele.
 
 Requer Windows 11 x64 e Microsoft Edge WebView2 Runtime. Alt + clique central é a ativação padrão; seu atalho salvo continua funcionando. A engrenagem permite escolher o atalho de teclado. Esc ou clique externo oculta o launcher.
+
+## Transparência e modo minimizado
+
+Abra **engrenagem → Transparência e tamanho**. Os quatro controles vão de **0% (sólido)** a **100% (sem fundo)** e são salvos automaticamente:
+
+- **Menu circular:** fundo do círculo, centro e controles abaixo dele.
+- **Setor selecionado:** fundo da categoria destacada, independente do restante do círculo.
+- **Painel lateral:** fundo da lista de opções.
+- **Botões dos apps:** fundo de cada cartão de aplicativo/atalho.
+
+Os nomes, ícones e contornos mantêm sua intensidade. Quanto maior a transparência, mais o conteúdo atrás do menu aparece. O ajuste afeta os fundos do Orbit; não modifica a janela dos aplicativos abertos.
+
+Ative **Modo minimizado — só ícones** nessa seção ou pelo botão de reduzir/expandir abaixo do círculo. No tamanho padrão de janela, a bola passa de **304 para 208 px**, e os atalhos aparecem em uma grade de botões de 44×44 px. Passe o mouse para ler os nomes. Teclado, paginação, cadastro e abertura continuam disponíveis. Configurações e resultados do Work mantêm seus textos.
+
+**Restaurar transparência e tamanho** retorna ao modo com nomes e aos valores padrão: círculo 0%, seleção 0%, painel 4% e apps 0%. A atualização preenche esses valores automaticamente em preferências antigas.
 
 ## Seus três menus
 
@@ -59,11 +74,11 @@ Atalhos, histórico e preferências continuam em `%LOCALAPPDATA%\app.orbit.launc
 
 Na prévia web, temas e cadastro de URLs funcionam. Ícones nativos, seletores, ações Windows e a abertura do Work precisam da versão desktop.
 
-![Prévia dos três modos e quatro temas, composta no Chromium](downloads/orbit-v0.1.7-preview.png)
+![Prévia dos três modos e quatro temas, composta no Chromium](downloads/orbit-v0.1.8-preview.png)
 
 ## Testes e desenvolvimento
 
-Resultados e limites estão em [VALIDACAO.md](VALIDACAO.md). O executável foi compilado em Linux para Windows; não foi executado no Windows nesta rodada. O Chromium gerenciado bloqueou a instalação da extensão, portanto a conexão completa com o Brave real permanece pendente. A lógica da extensão, o host Rust e a fronteira da interface foram testados separadamente.
+Resultados e limites estão em [VALIDACAO.md](VALIDACAO.md). O executável foi compilado em Linux para Windows; não foi executado no Windows nesta rodada. O Chromium gerenciado bloqueou a instalação da extensão, portanto a conexão completa com o Brave real permanece pendente. A lógica da extensão, o host Rust e a fronteira da interface foram testados separadamente. Nesta versão passaram 80 testes da interface, 33 Rust e 5 da extensão; os detalhes estão no relatório.
 
 No Windows: Node 22.12+ ou 24, Rust MSVC, Visual Studio Build Tools C++, Windows SDK e WebView2.
 
@@ -80,4 +95,4 @@ npm.cmd run tauri -- build
 
 No Linux, `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` permite usar um Chromium instalado. Os testes do núcleo rodam com `cargo test --lib --manifest-path src-tauri/Cargo.toml --locked`. Após `cargo build --bin orbit --manifest-path src-tauri/Cargo.toml --locked`, `node tools/check-native-host.mjs` verifica o host Rust real com pipes binários e localhost. `node tools/visual-preview.mjs` gera a composição e verifica contraste sem desfoque.
 
-Este ZIP é portátil e não possui assinatura digital. Instalador NSIS não foi gerado nesta entrega. Base do projeto: fonte 0.1.5 enviada pelo usuário e correções 0.1.6; o histórico de validação foi preservado em `docs/`.
+Este ZIP é portátil e não possui assinatura digital. Instalador NSIS não foi gerado nesta entrega. Base do projeto: fonte 0.1.5 enviada pelo usuário, correções 0.1.6 e Work 0.1.7; o histórico de validação foi preservado em `docs/`.

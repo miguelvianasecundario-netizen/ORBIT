@@ -4,12 +4,16 @@ import { icon } from "./icons";
 import { categories, themes, modeNames, modes } from "./data";
 import { esc } from "./utils";
 import { itemIcon } from "./item-icons";
+import { transparencyControls } from "./appearance";
 import type { OrbitState, CategoryId } from "./types";
 export function settingsView(state: OrbitState, selected: CategoryId | null) {
   const mode = state.settings.mode;
   return `<div class="panel-backdrop"><aside class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div class="panel-header"><h2 id="settings-title">Configurações</h2><button class="icon-button" id="close-settings" aria-label="Fechar configurações">${icon("close")}</button></div>
   <p class="panel-note">${native ? "Seu ORBIT, do seu jeito. Alterações salvas neste computador." : "Prévia no navegador. Pastas, jogos e aplicativos precisam da versão Windows."}</p>
   <section class="settings-section"><h3>${icon("palette")} Aparência</h3><div class="theme-picker" role="group" aria-label="Temas">${themes.map((t) => `<button class="theme-choice" data-theme-choice="${t.id}" aria-label="Tema ${t.title}" aria-pressed="${state.settings.theme === t.id}"><span class="theme-swatch" aria-hidden="true" style="--swatch-base:${t.colors[0]};--swatch-accent:${t.colors[1]};--swatch-ink:${t.colors[2]}"><i></i><b></b></span><span>${t.title}</span></button>`).join("")}</div></section>
+  <section class="settings-section appearance-controls"><h3>${icon("palette")} Transparência e tamanho</h3><p class="help">Ajuste cada fundo. 0% é sólido; 100% deixa só ícones, textos e contornos. As mudanças aparecem na hora.</p>
+  ${transparencyControls.map(({ key, label }) => `<div class="transparency-control"><label for="${key}">${label}</label><span id="${key}-value" aria-hidden="true">${state.settings[key]}%</span><input id="${key}" data-transparency="${key}" type="range" min="0" max="100" step="1" value="${state.settings[key]}" aria-label="Transparência: ${label.toLocaleLowerCase()}" /></div>`).join("")}
+  <label class="appearance-toggle" for="icons-only"><input id="icons-only" type="checkbox" ${state.settings.iconsOnly ? "checked" : ""}/><span>Modo minimizado — só ícones</span></label><p class="help">Passe o mouse para ver os nomes. Use o botão abaixo do círculo para alternar rapidamente.</p><button class="secondary" id="reset-appearance">Restaurar transparência e tamanho</button></section>
   <section class="settings-section"><h3>${icon("plus")} Adicionar atalho</h3><p class="help">Escolha uma categoria ou “Direto na bola”. Uma opção como Livros pode abrir sua pasta com um clique.</p>
   <form id="shortcut-form"><label for="shortcut-title">Nome</label><input id="shortcut-title" name="title" placeholder="Ex.: Livros ou meu jogo" maxlength="160" aria-describedby="shortcut-title-help" required/>
   <p class="help" id="shortcut-title-help">Até 80 caracteres. Nomes longos aparecem resumidos na bola; passe o mouse para ler por inteiro.</p>

@@ -1,4 +1,6 @@
 const paths: Record<string, string> = {
+  minimize: '<path d="M3 8h5V3m13 5h-5V3M3 16h5v5m13-5h-5v5"/>',
+  expand: '<path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/>',
   briefcase:
     '<rect x="3" y="7" width="18" height="14" rx="3"/><path d="M8 7V4h8v3M3 12l9 3 9-3M10 13v4h4v-4"/>',
   layers: '<path d="m12 2 10 5-10 5L2 7Zm-10 9 10 5 10-5M2 16l10 5 10-5"/>',

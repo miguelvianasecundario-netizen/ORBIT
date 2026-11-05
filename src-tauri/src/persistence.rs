@@ -360,6 +360,74 @@ mod tests {
     }
 
     #[test]
+    fn appearance_defaults_migrate_and_independent_values_survive_reopening() {
+        let dir = std::env::temp_dir().join(format!("orbit-appearance-{}", Uuid::new_v4()));
+        std::fs::create_dir(&dir).unwrap();
+        let file = dir.join("orbit.sqlite3");
+        let expected = Settings {
+            trigger: "keyboard".into(),
+            hotkey: "F8".into(),
+            theme: "paper".into(),
+            mode: "work".into(),
+            menu_transparency: 100,
+            selection_transparency: 67,
+            panel_transparency: 25,
+            app_transparency: 0,
+            icons_only: true,
+        };
+        {
+            let db = Database::open(&file).unwrap();
+            db.lock()
+                .unwrap()
+                .execute(
+                    "INSERT INTO preferences(key,value) VALUES('settings',?1)",
+                    [r#"{"trigger":"keyboard","hotkey":"F8","theme":"paper","mode":"work"}"#],
+                )
+                .unwrap();
+            let old = db.snapshot().unwrap().settings;
+            assert_eq!(old.panel_transparency, 4);
+            assert_eq!(old.menu_transparency, 0);
+            assert!(!old.icons_only);
+            assert_eq!(old.hotkey, "F8");
+            assert_eq!(old.mode, "work");
+            db.save_settings(expected.clone()).unwrap();
+            for settings in [
+                Settings {
+                    menu_transparency: 101,
+                    ..expected.clone()
+                },
+                Settings {
+                    selection_transparency: 101,
+                    ..expected.clone()
+                },
+                Settings {
+                    panel_transparency: 101,
+                    ..expected.clone()
+                },
+                Settings {
+                    app_transparency: 101,
+                    ..expected.clone()
+                },
+            ] {
+                assert!(db.save_settings(settings).is_err());
+            }
+            assert_eq!(db.snapshot().unwrap().settings, expected);
+            assert!(serde_json::from_str::<Settings>(
+                r#"{"trigger":"keyboard","menuTransparency":-1}"#
+            )
+            .is_err());
+            assert!(serde_json::from_str::<Settings>(
+                r#"{"trigger":"keyboard","panelTransparency":0.5}"#
+            )
+            .is_err());
+        }
+        let db = Database::open(&file).unwrap();
+        assert_eq!(db.snapshot().unwrap().settings, expected);
+        drop(db);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
     fn usage_counts_and_history_reset_preserve_preferences_and_shortcuts() {
         let db = memory_db();
         db.save_settings(Settings {

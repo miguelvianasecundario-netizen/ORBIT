@@ -9,6 +9,7 @@ pub struct Usage {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub trigger: String,
     #[serde(default = "crate::hotkey::default_hotkey")]
@@ -17,6 +18,20 @@ pub struct Settings {
     pub theme: String,
     #[serde(default = "default_mode")]
     pub mode: String,
+    #[serde(default)]
+    pub menu_transparency: u8,
+    #[serde(default)]
+    pub selection_transparency: u8,
+    #[serde(default = "default_panel_transparency")]
+    pub panel_transparency: u8,
+    #[serde(default)]
+    pub app_transparency: u8,
+    #[serde(default)]
+    pub icons_only: bool,
+}
+
+fn default_panel_transparency() -> u8 {
+    4
 }
 
 fn default_theme() -> String {
@@ -33,12 +48,28 @@ impl Default for Settings {
             hotkey: crate::hotkey::default_hotkey(),
             theme: default_theme(),
             mode: default_mode(),
+            menu_transparency: 0,
+            selection_transparency: 0,
+            panel_transparency: default_panel_transparency(),
+            app_transparency: 0,
+            icons_only: false,
         }
     }
 }
 
 impl Settings {
     pub fn validate(&self) -> Result<(), String> {
+        if [
+            self.menu_transparency,
+            self.selection_transparency,
+            self.panel_transparency,
+            self.app_transparency,
+        ]
+        .iter()
+        .any(|value| *value > 100)
+        {
+            return Err("A transparência deve estar entre 0% e 100%.".into());
+        }
         if !matches!(
             self.theme.as_str(),
             "ocean" | "amethyst" | "graphite" | "paper"

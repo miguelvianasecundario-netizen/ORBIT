@@ -53,7 +53,7 @@ try {
   const rows = Array.from(
     { length: 17 },
     (_, i) =>
-      `<div class="row"><span>${["orbit-windows-x64-v0.1.7.zip", "Documentos — meus projetos", "Biblioteca e referências", "Downloads e aplicativos"][i % 4]}</span><span>04/11/2026 09:10</span><span>${i % 2 ? "Pasta de arquivos" : "Arquivo ZIP"}</span><span>2.105 KB</span></div>`,
+      `<div class="row"><span>${["orbit-windows-x64-v0.1.8.zip", "Documentos — meus projetos", "Biblioteca e referências", "Downloads e aplicativos"][i % 4]}</span><span>04/11/2026 09:10</span><span>${i % 2 ? "Pasta de arquivos" : "Arquivo ZIP"}</span><span>2.105 KB</span></div>`,
   ).join("");
   const themes = [
     ["ocean", "Oceano"],
@@ -63,7 +63,7 @@ try {
   ];
   await page.setContent(`<!doctype html><html><head><style>
     *{box-sizing:border-box} body{margin:0;background:#edf2ef;font:14px Arial,sans-serif;color:#213d32;padding:24px}h1{font-size:24px;margin:0 0 8px}.note{color:#50685d;margin:0 0 22px}.scenes{display:grid;grid-template-columns:1fr 1fr;gap:20px}.scene{border-radius:18px;overflow:hidden;box-shadow:0 5px 18px #1d392022}.label{font-size:14px;font-weight:700;padding:14px 16px;background:#fff}.desktop{height:492px;position:relative;overflow:hidden;background:#191919;color:#eee}.paper{background:#fff;color:#242424}.amethyst{background:linear-gradient(125deg,#2353a5,#7231a4 40%,#f7b47f);color:#fff}.toolbar{padding:15px 16px;font-size:14px;border-bottom:1px solid #8886;background:#8881}.columns{font-size:12px;padding:12px 14px;border-bottom:1px solid #8883;color:#999}.row{display:flex;gap:25px;white-space:nowrap;line-height:27px;font-size:13px;padding:0 12px}.row span:first-child{width:245px;flex-shrink:0}.row:nth-child(4n){background:#8882}.amethyst .row{font-size:15px;font-weight:700;line-height:29px}iframe{position:absolute;width:720px;height:440px;border:0;left:12px;top:38px;z-index:1;background:transparent;color-scheme:light}.desktop:not(.paper) iframe{color-scheme:dark}.foot{font-size:13px;margin:20px 0 0;color:#53685d}
-  </style></head><body><h1>ORBIT 0.1.7 · Quatro temas, leitura protegida</h1><p class="note">Principal · Descanso · Work · Atalhos em qualquer menu</p><div class="scenes">${themes.map(([id, title]) => `<section class="scene"><div class="label">${title}</div><div class="desktop ${id}"><div class="toolbar">← &nbsp; Downloads &nbsp; › &nbsp; Arquivos</div><div class="columns">Nome &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Modificado em &nbsp; &nbsp; Tipo</div>${rows}<iframe src="http://127.0.0.1:1421"></iframe></div></section>`).join("")}</div><p class="foot">Composições no Chromium, tamanho real 720 × 440, com desfoque desativado. Não são capturas nativas do Windows.</p></body></html>`);
+  </style></head><body><h1>ORBIT 0.1.8 · Transparência e modo só ícones</h1><p class="note">Fundos independentes · Ícones e textos nítidos · Tamanho reduzido</p><div class="scenes">${themes.map(([id, title]) => `<section class="scene"><div class="label">${title}</div><div class="desktop ${id}"><div class="toolbar">← &nbsp; Downloads &nbsp; › &nbsp; Arquivos</div><div class="columns">Nome &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Modificado em &nbsp; &nbsp; Tipo</div>${rows}<iframe src="http://127.0.0.1:1421"></iframe></div></section>`).join("")}</div><p class="foot">Composições no Chromium, tamanho real 720 × 440, com desfoque desativado. Não são capturas nativas do Windows.</p></body></html>`);
   const frames = page.frames().filter((frame) => frame !== page.mainFrame());
   assert.equal(frames.length, 4);
   const metrics = [];
@@ -106,10 +106,11 @@ try {
       const result = [];
       const root = getComputedStyle(document.documentElement);
       for (const token of [
-        "--surface",
-        "--selected",
-        "--hover",
-        "--item",
+        "--menu-fill",
+        "--selection-fill",
+        "--panel-fill",
+        "--app-fill",
+        "--app-hover-fill",
         "--input",
       ]) {
         for (const bg of [
@@ -153,7 +154,28 @@ try {
         ...contrast.filter((x) => x.kind === "icon").map((x) => x.ratio),
       ),
     });
-    if (index === 0 || index === 3) {
+    if (index > 0) {
+      await frame
+        .getByRole("button", { name: "Configurações", exact: true })
+        .click();
+      for (const [id, value] of Object.entries({
+        menuTransparency: 35,
+        selectionTransparency: 20,
+        panelTransparency: 45,
+        appTransparency: 25,
+      })) {
+        await frame.locator(`#${id}`).evaluate((input, value) => {
+          input.value = String(value);
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        }, value);
+      }
+      if (index >= 2) await frame.locator("#icons-only").check();
+      await frame
+        .getByRole("button", { name: "Fechar configurações", exact: true })
+        .click();
+    }
+    if (index === 0) {
       await frame
         .getByRole("button", { name: "Bola anterior: Work", exact: true })
         .click();
@@ -189,9 +211,23 @@ try {
     });
     assert.equal(await frame.getByRole("alert").count(), 0);
   }
-  for (const frame of frames) await frame.locator(".toast").waitFor({state: "detached"});
+  for (const frame of frames)
+    await frame.locator(".toast").waitFor({ state: "detached" });
   assert.deepEqual(errors, []);
-  await page.screenshot({ path: `${output}/orbit-v0.1.7-preview.png` });
+  await page.screenshot({ path: `${output}/orbit-v0.1.8-preview.png` });
+  await frames[0]
+    .getByRole("button", { name: "Configurações", exact: true })
+    .click();
+  await frames[0].locator(".appearance-controls").evaluate((section) => {
+    const panel = section.closest(".settings-panel");
+    panel.scrollTop +=
+      section.getBoundingClientRect().top -
+      panel.getBoundingClientRect().top -
+      70;
+  });
+  await frames[0]
+    .locator(".settings-panel")
+    .screenshot({ path: `${output}/appearance-settings.png` });
   await writeFile(
     `${output}/contrast.json`,
     JSON.stringify(

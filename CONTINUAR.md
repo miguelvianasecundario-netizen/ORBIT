@@ -1,15 +1,23 @@
-# Continuar ORBIT 0.1.7
+# Continuar ORBIT 0.1.8
 
-Base: fonte 0.1.5 enviada pelo usuário + correções 0.1.6. Preserve `app.orbit.launcher`, o banco local, os três modos e os quatro temas.
+Fonte baseada no ZIP 0.1.5 do usuário, correções 0.1.6, Work 0.1.7 e aparência 0.1.8. Preserve a identidade `app.orbit.launcher`, o SQLite e os modos Principal/Descanso/Work.
 
-Work é o terceiro menu; só inclui `work-apps`, `work-browser`, `work-projects` e `orbit-work`. `work-all` é uma tela, não uma categoria de atalho. Um atalho Work individual usa `launch_work_item`, e o lote usa `launch_work`, ambos com exclusão mútua no backend.
+## Aparência
 
-A extensão Brave deve ser preparada no Orbit e carregada pelo usuário no navegador. O ID vem da chave pública no manifesto e precisa corresponder a `browser_identity.rs`. Não troque a chave sem atualizar ambos. O próprio executável é o host nativo; o ramo de mensagens roda antes de criar Tauri ou registrar atalhos globais.
+`Settings` possui `menuTransparency`, `selectionTransparency`, `panelTransparency`, `appTransparency` (inteiros 0–100) e `iconsOnly` (booleano). Padrões: 0, 0, 4, 0 e false. Defaults devem concordar em `src/appearance.ts` e `src-tauri/src/models.rs`. Preferências antigas recebem esses valores via serde/default e normalização web.
 
-A lógica de abas e o protocolo foram testados separadamente. O Chromium gerenciado bloqueia instalar a extensão; não alterar a política para contornar isso. Conexão completa com Brave real, registro HKCU, extração de ícones e minimização/foco ainda precisam de validação em Windows. Consulte VALIDACAO.md.
+Os sliders atualizam fundos imediatamente e agrupam gravações por 250 ms; change/fechar configurações confirma o rascunho. Não recriar o formulário ao ajustar aparência. A fila de preferências usa o último salvamento confirmado; uma falha de atalho global não pode contaminar a próxima alteração.
 
-Não substituir a fila de preferências por snapshots otimistas: uma falha de atalho global deve manter o registro anterior sem contaminar os próximos salvamentos. Não recriar o formulário ao salvar o atalho global.
+`radial.ts` desenha uma base SVG com recortes sob os setores existentes. Não adicionar uma camada opaca atrás dos setores, pois isso anularia a transparência independente. Textos/ícones não recebem opacity do contêiner. `icons-only` no elemento raiz altera apenas a apresentação, mantendo IDs, eventos e rótulos acessíveis; configurações e resultados do Work continuam com texto.
 
-`src/item-icons.ts`: imagem assíncrona com fallback. `automatic_icons.rs`: favicon HTTPS/cache e ícone nativo. `work.rs`: validação, escopo, resultados e histórico. `work_windows.rs`: abertura minimizada, detecção de processo e acompanhamento limitado de janelas novas. `browser_bridge.rs` / `browser_host.rs`: token, framing e registro do host. `browser-extension/`: MV3 e fila de abas. `windows_paths.rs`: caminhos canônicos do Rust para APIs do shell, preservando UNC.
+## Work
 
-O ZIP não contém banco pessoal. Dados continuam em `%LOCALAPPDATA%\app.orbit.launcher\orbit.sqlite3`. Encerre o aplicativo antes de copiar esse banco.
+Somente `work-apps`, `work-browser`, `work-projects` e `orbit-work` pertencem ao Work. `work-all` é uma tela. Um clique individual usa `launch_work_item`; o lote usa `launch_work`. Ambos compartilham exclusão mútua no backend.
+
+A extensão Brave exige preparação no Orbit e carregamento pelo usuário no navegador. Sua chave pública define o ID esperado em `browser_identity.rs`. O próprio orbit.exe atende ao native messaging antes de inicializar Tauri. Não alterar as políticas de um navegador gerenciado para contornar bloqueios.
+
+## Validação
+
+80 testes Playwright, 33 Rust e 5 da extensão passaram; build TypeScript/Vite e Clippy Linux/Windows aprovados. Conferir composição, ícones, registro da extensão, foco/minimização e hooks em Windows real. Consulte VALIDACAO.md para os limites.
+
+O ZIP não contém banco pessoal. Dados ficam em `%LOCALAPPDATA%\app.orbit.launcher\orbit.sqlite3`; encerre o Orbit antes de copiar esse banco.
