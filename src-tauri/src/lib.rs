@@ -1,0 +1,271 @@
+pub mod actions;
+pub mod automatic_icons;
+pub mod browser_bridge;
+pub mod browser_host;
+mod browser_identity;
+pub mod hotkey;
+pub mod models;
+#[cfg(windows)]
+mod native;
+pub mod persistence;
+#[cfg(windows)]
+mod window;
+pub mod window_geometry;
+pub mod windows_paths;
+pub mod work;
+#[cfg(windows)]
+mod work_windows;
+#[cfg(windows)]
+mod desktop {
+    use crate::{models::*, native::Listener, persistence::Database};
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Mutex,
+    };
+    static DIALOG_ACTIVE: AtomicBool = AtomicBool::new(false);
+    pub(super) fn dialog_active() -> bool {
+        DIALOG_ACTIVE.load(Ordering::Relaxed)
+    }
+    #[tauri::command]
+    fn set_dialog_active(active: bool, window: tauri::WebviewWindow) -> Result<(), String> {
+        DIALOG_ACTIVE.store(active, Ordering::Relaxed);
+        if !active {
+            window.show().map_err(|e| e.to_string())?;
+            window.set_focus().map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+    use tauri::{
+        menu::{Menu, MenuItem},
+        tray::TrayIconBuilder,
+        Manager, State,
+    };
+    struct NativeState(Mutex<Option<Listener>>);
+    struct WorkState(AtomicBool);
+    struct WorkGuard(tauri::AppHandle);
+    impl Drop for WorkGuard {
+        fn drop(&mut self) {
+            self.0
+                .state::<WorkState>()
+                .0
+                .store(false, Ordering::Release);
+        }
+    }
+    #[tauri::command]
+    fn browser_status(bridge: State<crate::browser_bridge::BrowserBridge>) -> serde_json::Value {
+        serde_json::json!({"connected": bridge.connected(), "prepared": bridge.prepared()})
+    }
+    #[tauri::command]
+    async fn prepare_browser(app: tauri::AppHandle) -> Result<String, String> {
+        tauri::async_runtime::spawn_blocking(move || {
+            let bridge = app.state::<crate::browser_bridge::BrowserBridge>();
+            let path = crate::browser_host::prepare(bridge.directory())?;
+            crate::work_windows::open_extension_folder(&path)?;
+            Ok(path.to_string_lossy().to_string())
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[tauri::command]
+    async fn get_item_icon(id: String, app: tauri::AppHandle) -> Result<Option<String>, String> {
+        tauri::async_runtime::spawn_blocking(move || {
+            let directory = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+            Ok(crate::automatic_icons::resolve(
+                &id,
+                &app.state::<Database>(),
+                &directory,
+            ))
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[tauri::command]
+    async fn launch_work(app: tauri::AppHandle) -> Result<crate::work::WorkReport, String> {
+        run_work_request(app, None).await
+    }
+    #[tauri::command]
+    async fn launch_work_item(
+        id: String,
+        app: tauri::AppHandle,
+    ) -> Result<crate::work::WorkReport, String> {
+        run_work_request(app, Some(id)).await
+    }
+    async fn run_work_request(
+        app: tauri::AppHandle,
+        id: Option<String>,
+    ) -> Result<crate::work::WorkReport, String> {
+        if app.state::<WorkState>().0.swap(true, Ordering::AcqRel) {
+            return Err("Seu Work já está sendo aberto.".into());
+        }
+        let guard = WorkGuard(app.clone());
+        tauri::async_runtime::spawn_blocking(move || {
+            let _guard = guard;
+            match id {
+                Some(id) => crate::work::launch_one(
+                    &app.state::<Database>(),
+                    &app.state::<crate::browser_bridge::BrowserBridge>(),
+                    &id,
+                ),
+                None => crate::work::launch_all(
+                    &app.state::<Database>(),
+                    &app.state::<crate::browser_bridge::BrowserBridge>(),
+                ),
+            }
+        })
+        .await
+        .map_err(|e| e.to_string())?
+    }
+    #[tauri::command]
+    fn frontend_ready(app: tauri::AppHandle) -> Result<(), String> {
+        crate::window::activate(&app)
+    }
+    #[tauri::command]
+    fn quit_orbit(app: tauri::AppHandle) {
+        app.exit(0);
+    }
+    #[tauri::command]
+    fn get_state(db: State<Database>) -> Result<StateSnapshot, String> {
+        db.snapshot()
+    }
+    #[tauri::command]
+    fn execute_action(id: String, db: State<Database>) -> Result<(), String> {
+        crate::actions::execute(&id, &db)?;
+        db.record_use(&id)
+    }
+    #[tauri::command]
+    fn hide_launcher(window: tauri::WebviewWindow) -> Result<(), String> {
+        window.hide().map_err(|e| e.to_string())
+    }
+    #[tauri::command]
+    fn save_settings(settings: Settings, native: State<NativeState>) -> Result<(), String> {
+        settings.validate()?;
+        let guard = native.0.lock().map_err(|e| e.to_string())?;
+        let listener = guard.as_ref().ok_or("Captura global indisponível.")?;
+        listener.configure(settings)
+    }
+    #[tauri::command]
+    fn add_shortcut(
+        title: String,
+        category: String,
+        action: Action,
+        db: State<Database>,
+    ) -> Result<Shortcut, String> {
+        db.add_shortcut(title, category, action)
+    }
+    #[tauri::command]
+    fn remove_shortcut(id: String, db: State<Database>) -> Result<(), String> {
+        db.remove_shortcut(&id)
+    }
+    #[tauri::command]
+    fn clear_history(db: State<Database>) -> Result<(), String> {
+        db.clear_history()
+    }
+    pub fn run() {
+        let app = tauri::Builder::default()
+            .plugin(tauri_plugin_dialog::init())
+            .invoke_handler(tauri::generate_handler![
+                get_state,
+                browser_status,
+                prepare_browser,
+                get_item_icon,
+                launch_work,
+                launch_work_item,
+                frontend_ready,
+                quit_orbit,
+                execute_action,
+                hide_launcher,
+                save_settings,
+                add_shortcut,
+                remove_shortcut,
+                clear_history,
+                set_dialog_active
+            ])
+            .setup(|app| {
+                let directory = app.path().app_local_data_dir()?;
+                std::fs::create_dir_all(&directory)?;
+                let db = Database::open(&directory.join("orbit.sqlite3"))
+                    .map_err(std::io::Error::other)?;
+                let settings = db.snapshot().map_err(std::io::Error::other)?.settings;
+                let listener = Listener::start(app.handle().clone(), &settings)
+                    .map_err(std::io::Error::other)?;
+                app.manage(db);
+                app.manage(NativeState(Mutex::new(Some(listener))));
+                let bridge = crate::browser_bridge::BrowserBridge::start(&directory)
+                    .map_err(std::io::Error::other)?;
+                // Updating a portable Orbit keeps the registered host pointing to this executable.
+                if bridge.prepared() {
+                    let _ = crate::browser_host::prepare(&directory);
+                }
+                app.manage(bridge);
+                app.manage(WorkState(AtomicBool::new(false)));
+                let open = MenuItem::with_id(app, "open", "Abrir Orbit", true, None::<&str>)?;
+                let quit = MenuItem::with_id(app, "quit", "Encerrar Orbit", true, None::<&str>)?;
+                let menu = Menu::with_items(app, &[&open, &quit])?;
+                let mut tray = TrayIconBuilder::new()
+                    .tooltip("Orbit — launcher radial")
+                    .menu(&menu)
+                    .on_menu_event(|app, event| match event.id.as_ref() {
+                        "open" => {
+                            if let Err(e) = crate::window::activate(app) {
+                                eprintln!("ORBIT: {e}");
+                            }
+                        }
+                        "quit" => app.exit(0),
+                        _ => (),
+                    });
+                if let Some(icon) = app.default_window_icon() {
+                    tray = tray.icon(icon.clone());
+                }
+                tray.build(app)?;
+                Ok(())
+            })
+            .on_window_event(|window, event| match event {
+                tauri::WindowEvent::Focused(false) => {
+                    if !DIALOG_ACTIVE.load(Ordering::Relaxed) {
+                        let _ = window.hide();
+                    }
+                }
+                tauri::WindowEvent::CloseRequested { api, .. } => {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+                _ => (),
+            })
+            .build(tauri::generate_context!());
+        let app = match app {
+            Ok(app) => app,
+            Err(error) => {
+                let message: Vec<u16> = format!("Não foi possível iniciar o Orbit: {error}")
+                    .encode_utf16()
+                    .chain(Some(0))
+                    .collect();
+                let title: Vec<u16> = "ORBIT".encode_utf16().chain(Some(0)).collect();
+                unsafe {
+                    windows_sys::Win32::UI::WindowsAndMessaging::MessageBoxW(
+                        std::ptr::null_mut(),
+                        message.as_ptr(),
+                        title.as_ptr(),
+                        windows_sys::Win32::UI::WindowsAndMessaging::MB_OK
+                            | windows_sys::Win32::UI::WindowsAndMessaging::MB_ICONERROR,
+                    );
+                }
+                return;
+            }
+        };
+        app.run(|handle, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                if let Some(state) = handle.try_state::<NativeState>() {
+                    if let Ok(mut guard) = state.0.lock() {
+                        guard.take();
+                    }
+                }
+            }
+        });
+    }
+}
+#[cfg(windows)]
+pub use desktop::run;
+#[cfg(not(windows))]
+pub fn run() {
+    eprintln!("ORBIT desktop requer Windows 11. Use npm run dev para a interface web.");
+}

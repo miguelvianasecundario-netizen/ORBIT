@@ -1,0 +1,27 @@
+{
+  "name": "orbit-launcher",
+  "version": "0.1.8",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "tauri": "tauri",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "format": "prettier --write src tests *.ts *.json README.md",
+    "test:extension": "node browser-extension/tests/tabs.test.mjs"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-dialog": "^2.6.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@tauri-apps/cli": "^2.10.1",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}
